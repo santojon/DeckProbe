@@ -1,0 +1,20 @@
+{
+  "name": "deckprobe",
+  "private": true,
+  "description": "DeckProbe — Steam Deck plugin toolkit (CDP probes, screenshot pipeline, perf bench).",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18",
+    "python": ">=3.10"
+  },
+  "scripts": {
+    "cli": "python3 cli.py",
+    "probe": "python3 cli.py probe",
+    "screenshots": "python3 cli.py screenshot",
+    "diag": "python3 cli.py diag list",
+    "diag:run": "python3 cli.py diag run",
+    "perf:bench": "python3 perf-bench.py",
+    "uitests": "cd .. && python3 -m deckprobe.uitests.run",
+    "uitests:list": "cd .. && python3 -m deckprobe.uitests.run --list"
+  }
+}

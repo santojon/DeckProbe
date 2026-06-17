@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.invalid/deckprobe.config.schema.json",
+  "title": "DeckProbe project config",
+  "description": "Convention file that lives at the parent repo root (deckprobe.config.json). Every entry projects into a matching DECKPROBE_* environment variable when the toolkit boots. Pre-existing env vars always win.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "$schema": { "type": "string" },
+    "selectors": {
+      "type": "object",
+      "description": "DOM selectors / global var names / route the toolkit probes target. Each key becomes DECKPROBE_<key>.",
+      "additionalProperties": { "type": "string" },
+      "properties": {
+        "HOME_MOUNT_ID":          { "type": "string", "description": "Host page root mount id" },
+        "QAM_SCOPE_SEL":          { "type": "string", "description": "QAM panel scope selector" },
+        "ROOT_SEL":               { "type": "string", "description": "Plugin root selector" },
+        "SHELF_SEL":              { "type": "string", "description": "Repeating shelf-container selector" },
+        "ROW_SEL":                { "type": "string", "description": "Horizontal row container selector" },
+        "CARD_SEL":               { "type": "string", "description": "Card selector inside a row" },
+        "FOCUS_CLASS":            { "type": "string", "description": "Focused-card class name" },
+        "VIEWPORT_SEL":           { "type": "string", "description": "Outer viewport container" },
+        "NEWS_SEL":               { "type": "string", "description": "Native promo / news container" },
+        "COLLAPSIBLE_HEADER_SEL": { "type": "string", "description": "Collapsible section header" },
+        "ABOUT_ROUTE":            { "type": "string", "description": "About / docs route" },
+        "CLASS_MAP_GLOBAL":       { "type": "string", "description": "Runtime classmap global var" },
+        "CLASS_MAP_LS_KEY":       { "type": "string", "description": "Runtime classmap localStorage key" },
+        "PROJECT_LABEL":          { "type": "string", "description": "Console-filter label" },
+        "SETTINGS_GLOBAL":        { "type": "string", "description": "Shared-settings global var" }
+      }
+    },
+    "diag_dirs": {
+      "description": "Extra directories scanned by `cli.py diag list/run`. Paths are anchored to the parent repo root when relative. Becomes DECKPROBE_DIAG_DIRS (colon-joined).",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "uitests_suites_dir": {
+      "type": "string",
+      "description": "Default --suites-dir for `python -m deckprobe.uitests.run`. Becomes DECKPROBE_UITESTS_SUITES_DIR."
+    },
+    "screenshots_script": {
+      "type": "string",
+      "description": "Default project screenshot driver script. Becomes DECKPROBE_SCREENSHOT_SCRIPT."
+    },
+    "screenshots_dir": {
+      "type": "string",
+      "description": "Output directory for captured screenshots. Defaults to `<parent_root>/screenshots/` (created on first use). Becomes DECKPROBE_SCREENSHOTS_DIR."
+    },
+    "perf_bench_config": {
+      "type": "string",
+      "description": "Default --config path for `deckprobe/perf-bench.py`. Becomes DECKPROBE_PERF_BENCH_CONFIG."
+    }
+  }
+}
