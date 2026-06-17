@@ -21,7 +21,7 @@ or a git submodule.
 > ([`.github/workflows/clones.yml`](.github/workflows/clones.yml)) that
 > uses the [MShawon/github-clone-count-badge](https://github.com/MShawon/github-clone-count-badge)
 > action to write the rolling total into a public gist that
-> shields.io renders. To wire it up:
+> shields.io renders.
 
 ## What's in the box
 
