@@ -1,7 +1,7 @@
 # DeckProbe
 
 [![CI](https://github.com/santojon/DeckProbe/actions/workflows/ci.yml/badge.svg)](https://github.com/santojon/DeckProbe/actions/workflows/ci.yml)
-[![Clones](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/santojon/REPLACE_WITH_GIST_ID/raw/clone.json&logo=github&color=blue)](https://github.com/MShawon/github-clone-count-badge)
+[![Clones](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/santojon/e9076336e3c8c824f4e7a3ab9303a3b9/raw/clone.json&logo=github&color=blue)](https://github.com/MShawon/github-clone-count-badge)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](#requirements)
 [![Node](https://img.shields.io/badge/node-18%2B-brightgreen?logo=node.js&logoColor=white)](#requirements)
