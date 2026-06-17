@@ -1,0 +1,34 @@
+name: Enhancement
+description: Improvement to an existing probe / CLI / pipeline.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for incremental improvements that stay within DeckProbe's
+        existing scope (better error reporting, more efficient probes,
+        clearer CLI output). For brand-new features open a *Feature
+        request* instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What should change?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is the current behaviour insufficient?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Does this stay project-agnostic?
+      description: |
+        DeckProbe never carries plugin-specific code. If the change you're
+        proposing would only help one consumer, it probably belongs in
+        that consumer's `scripts/deckprobe-ext/` folder, not here.
+      placeholder: "Yes — the new flag works for any consumer that …"
+    validations:
+      required: true

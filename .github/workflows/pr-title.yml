@@ -1,0 +1,30 @@
+name: PR Title
+
+# Enforces the `[area] short summary` PR title convention documented
+# in `pull_request_template.md`. Fails the check (without blocking the
+# PR — the branch protection in `enforce-repo-settings.yml` controls
+# what's actually required) so contributors notice and fix.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const title = (context.payload.pull_request.title || '').trim();
+            const re = /^\[(cli|cdp|diag|tools|screenshots|uitests|perf|lib|config|docs|ci|chore)\]\s+\S/;
+            if (!re.test(title)) {
+              core.setFailed(
+                `PR title must match \`[area] short summary\` ` +
+                `(area ∈ cli / cdp / diag / tools / screenshots / uitests / perf / lib / config / docs / ci / chore). ` +
+                `Got: ${JSON.stringify(title)}`
+              );
+            }

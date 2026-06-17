@@ -1,0 +1,40 @@
+name: Feature request
+description: Brand-new probe / CLI subcommand / pipeline addition.
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        DeckProbe's scope is intentionally narrow: generic CDP / SSH /
+        screenshot / perf primitives that every Decky plugin author can
+        reuse. Project-specific additions belong in the consumer's
+        `scripts/deckprobe-ext/` folder.
+  - type: textarea
+    id: feature
+    attributes:
+      label: What should the toolkit do?
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why does this belong in DeckProbe (and not in the consumer)?
+      description: |
+        Make the case that the feature is plugin-agnostic. List two or
+        more plausible consumers that would benefit.
+    validations:
+      required: true
+  - type: textarea
+    id: api
+    attributes:
+      label: Proposed shape
+      description: |
+        Sketch the CLI flag, function signature, or probe contract.
+      render: shell
+  - type: checkboxes
+    id: scope-check
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require coupling to a specific plugin's React tree, settings shape, or DOM selectors beyond the existing `DECKPROBE_*` overrides.
+          required: true

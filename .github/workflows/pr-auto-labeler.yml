@@ -1,0 +1,70 @@
+name: PR Auto Labeler
+
+# Drops a single `area::<name>` chip on every PR based on which top-level
+# folder the change touched. Mirrors the convention in
+# `enforce-repo-settings.yml` so labels stay in sync.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply area::* labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner, repo, pull_number: pr.number, per_page: 100,
+            });
+            // First folder segment → area label.
+            const AREA_BY_PREFIX = {
+              'cli.py':         'area::cli',
+              'cdp.py':         'area::cdp',
+              'cdp.cjs':        'area::cdp',
+              'perf-bench.py':  'area::perf',
+              'diag/':          'area::diag',
+              'tools/':         'area::tools',
+              'screenshots/':   'area::screenshots',
+              'uitests/':       'area::uitests',
+              'lib/':           'area::lib',
+              'docs/':          'area::docs',
+              '.github/':       'area::ci',
+              'README.md':      'area::docs',
+              'CHANGELOG.md':   'area::docs',
+              'CONTRIBUTING.md': 'area::docs',
+              'SECURITY.md':    'area::docs',
+              'CODE_OF_CONDUCT.md': 'area::docs',
+            };
+            const wanted = new Set();
+            for (const f of files) {
+              for (const [prefix, label] of Object.entries(AREA_BY_PREFIX)) {
+                if (f.filename === prefix || f.filename.startsWith(prefix)) {
+                  wanted.add(label);
+                  break;
+                }
+              }
+            }
+            // Special case: deckprobe.config.json touches → area::config
+            if (files.some(f => f.filename === 'deckprobe.config.json' || f.filename.endsWith('/config.schema.json'))) {
+              wanted.add('area::config');
+            }
+            if (wanted.size === 0) return;
+            await github.rest.issues.addLabels({
+              owner, repo, issue_number: pr.number,
+              labels: [...wanted],
+            });
+            core.info('Added: ' + [...wanted].join(', '));

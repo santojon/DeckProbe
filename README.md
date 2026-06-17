@@ -1,5 +1,13 @@
 # DeckProbe
 
+[![CI](https://github.com/santojon/DeckProbe/actions/workflows/ci.yml/badge.svg)](https://github.com/santojon/DeckProbe/actions/workflows/ci.yml)
+[![Clones](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/santojon/REPLACE_WITH_GIST_ID/raw/clone.json&logo=github&color=blue)](https://github.com/MShawon/github-clone-count-badge)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](#requirements)
+[![Node](https://img.shields.io/badge/node-18%2B-brightgreen?logo=node.js&logoColor=white)](#requirements)
+[![Platform](https://img.shields.io/badge/platform-Steam%20OS-purple?logo=steamdeck&logoColor=white)](https://github.com/ValveSoftware/SteamOS)
+[![Plugin host](https://img.shields.io/badge/plugin%20host-Decky-purple.svg)](https://decky.xyz)
+
 Toolkit for developing Steam Deck plugins against a live device — CDP
 probes, screenshot pipeline, perf bench, UI-test runner. The scaffold
 is generic and can be dropped into any Decky plugin repo as a reference
@@ -7,6 +15,23 @@ or a git submodule.
 
 > Support repo, not a published library. No releases, no semver.
 > Changes are logged by date in `CHANGELOG.md` for traceability.
+
+> **About the Clones badge.** GitHub doesn't expose clone counts
+> publicly, so the badge above is backed by a daily workflow
+> ([`.github/workflows/clones.yml`](.github/workflows/clones.yml)) that
+> uses the [MShawon/github-clone-count-badge](https://github.com/MShawon/github-clone-count-badge)
+> action to write the rolling total into a public gist that
+> shields.io renders. To wire it up:
+> 1. Create a public gist with a single file named `clone.json`.
+> 2. Copy the gist id (the alphanumeric segment of the gist URL) into
+>    the `GIST_ID` repository **variable** (Settings → Secrets and
+>    variables → Actions → Variables).
+> 3. Create a `GIST_SECRET` repository **secret** with a Personal
+>    Access Token (Classic) that has the `gist` scope.
+> 4. Replace `REPLACE_WITH_GIST_ID` in the badge URL above with the
+>    same id (the workflow doesn't touch the README — only the gist).
+> The scheduled workflow runs daily; the first run populates the gist
+> and the badge starts rendering on the next push.
 
 ## What's in the box
 

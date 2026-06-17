@@ -1,0 +1,40 @@
+name: GitHub Clones
+
+# Updates the gist-backed clone-count badge once a day.
+# Pattern from https://github.com/MShawon/github-clone-count-badge — a
+# scheduled workflow queries `/repos/{owner}/{repo}/traffic/clones`,
+# accumulates the daily totals locally, and pushes the rolling JSON to
+# a public gist that shields.io renders as a badge.
+#
+# Required repository secrets:
+#   GIST_SECRET — a Personal Access Token (Classic) with the `gist`
+#                 scope. Used to write the public gist that backs the
+#                 badge. Generate at https://github.com/settings/tokens
+#
+# Required repository variables (Settings → Secrets and variables →
+# Actions → Variables):
+#   GIST_ID — id of the public gist that hosts `clone.json` for this
+#             repo. Create an empty public gist named `clone.json` once,
+#             then copy its id (the alphanumeric segment of the gist URL)
+#             into this variable.
+
+on:
+  schedule:
+    # Daily at 00:30 UTC — GitHub clone traffic resets every 14 days so
+    # a daily cadence with a 14-day rolling window covers everything.
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clones:
+    runs-on: ubuntu-latest
+    if: vars.GIST_ID != ''
+    steps:
+      - name: Update clone-count gist
+        uses: MShawon/github-clone-count-badge@master
+        with:
+          GITHUB_TOKEN: ${{ secrets.GIST_SECRET }}
+          GIST_ID: ${{ vars.GIST_ID }}

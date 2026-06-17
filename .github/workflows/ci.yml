@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-syntax:
+    name: Python syntax + ruff smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ruff
+        run: pipx install ruff
+
+      - name: Compile every .py
+        run: python -m compileall -q .
+
+      - name: Ruff (bug-catching only)
+        # Pyflakes (F) catches undefined / unused / unreachable. No
+        # stylistic / formatting rules here — this is a tools repo.
+        run: ruff check --select F .
+
+  cjs-syntax:
+    name: Node .cjs syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Parse every .cjs
+        # `node --check` validates JS syntax without executing — catches
+        # the kind of probe-author typos that would only show up the next
+        # time someone runs the probe against a device.
+        run: |
+          set -e
+          find . -name '*.cjs' -not -path './node_modules/*' | while read f; do
+            node --check "$f"
+          done

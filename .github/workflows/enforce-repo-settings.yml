@@ -1,0 +1,143 @@
+name: Enforce Repo Settings
+
+# Keeps the repository's merge / label / branch-protection configuration
+# in sync with the contributor expectations documented in CONTRIBUTING.md.
+#
+# Runs weekly + on-demand. `continue-on-error: true` so a transient API
+# blip doesn't trip the workflow; the next scheduled run reapplies any
+# missing setting. Uses ADMIN_GH_TOKEN when present (PAT with `repo`
+# scope) so branch protection can be configured; falls back to the
+# default GITHUB_TOKEN for the repo-settings / label sync that doesn't
+# require admin scope.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday at 08:00 UTC
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Ensure squash merge and delete-branch-on-merge
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADMIN_GH_TOKEN || github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const repoResp = await github.rest.repos.get({ owner, repo });
+            const current = repoResp.data;
+            const updates = {};
+            if (current.allow_squash_merge !== true)    updates.allow_squash_merge = true;
+            if (current.allow_merge_commit !== false)   updates.allow_merge_commit = false;
+            if (current.allow_rebase_merge !== false)   updates.allow_rebase_merge = false;
+            if (current.delete_branch_on_merge !== true) updates.delete_branch_on_merge = true;
+            if (Object.keys(updates).length === 0) {
+              core.info('Repository merge settings already configured.');
+            } else {
+              await github.rest.repos.update({ owner, repo, ...updates });
+              core.info('Updated repository settings: ' + JSON.stringify(updates));
+            }
+
+      - name: Sync labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADMIN_GH_TOKEN || github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+
+            // Tools-repo scope — far smaller than a typical product
+            // label set. Areas mirror the top-level directories in this
+            // repo so PR auto-labelling can drop a single area chip.
+            const required = [
+              // Type
+              { name: "type::bug",         color: "d73a4a", description: "Something isn't working" },
+              { name: "type::feature",     color: "0E8A16", description: "New probe / CLI subcommand / pipeline" },
+              { name: "type::enhancement", color: "a2eeef", description: "Improvement to an existing surface" },
+              { name: "type::duplicated",  color: "cfd3d7", description: "Issue or PR already exists" },
+              { name: "type::invalid",     color: "e4e669", description: "Not actionable" },
+              { name: "type::wontfix",     color: "ffffff", description: "Will not be worked on" },
+              // Priority
+              { name: "priority::critical", color: "B60205", description: "Critical — blocks consumers' dev loop" },
+              { name: "priority::high",     color: "D93F0B", description: "High — fix soon" },
+              { name: "priority::medium",   color: "FBCA04", description: "Medium — planned" },
+              { name: "priority::low",      color: "0E8A16", description: "Low — backlog" },
+              // Areas (top-level folders)
+              { name: "area::cli",         color: "5319E7", description: "cli.py / subcommand dispatch" },
+              { name: "area::cdp",         color: "5319E7", description: "cdp.py / cdp.cjs / Session helpers" },
+              { name: "area::diag",        color: "1D76DB", description: "diag/ probe scaffolds" },
+              { name: "area::tools",       color: "1D76DB", description: "tools/ (cdp_probe / classmap injector)" },
+              { name: "area::screenshots", color: "1D76DB", description: "screenshots/ pipeline" },
+              { name: "area::uitests",     color: "1D76DB", description: "uitests/ runner + suites" },
+              { name: "area::perf",        color: "1D76DB", description: "perf-bench.py" },
+              { name: "area::lib",         color: "0E8A16", description: "lib/ shared helpers (selectors / config)" },
+              { name: "area::config",      color: "0E8A16", description: "deckprobe.config.json convention" },
+              { name: "area::docs",        color: "0075CA", description: "README / docs / schema" },
+              { name: "area::ci",          color: "000000", description: ".github/ workflows" },
+              // Misc
+              { name: "good first issue",  color: "7057ff", description: "Good for newcomers to the toolkit" },
+              { name: "help wanted",       color: "008672", description: "Extra attention is needed" },
+            ];
+
+            const deprecated = ["documentation"];
+
+            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+            const existingMap = new Map(existing.map(l => [l.name, l]));
+
+            for (const label of required) {
+              if (existingMap.has(label.name)) {
+                const cur = existingMap.get(label.name);
+                if (cur.color !== label.color || cur.description !== label.description) {
+                  await github.rest.issues.updateLabel({ owner, repo, name: label.name, color: label.color, description: label.description });
+                  core.info(`Updated label: ${label.name}`);
+                }
+              } else {
+                await github.rest.issues.createLabel({ owner, repo, ...label });
+                core.info(`Created label: ${label.name}`);
+              }
+            }
+
+            for (const name of deprecated) {
+              if (existingMap.has(name)) {
+                await github.rest.issues.deleteLabel({ owner, repo, name });
+                core.info(`Deleted deprecated label: ${name}`);
+              }
+            }
+
+      - name: Ensure branch protection on default branch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADMIN_GH_TOKEN || github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const branch = (context.payload.repository && context.payload.repository.default_branch) || 'main';
+            // Required checks come from `.github/workflows/ci.yml`:
+            //   - Python syntax + ruff smoke
+            //   - Node .cjs syntax
+            // strict=true forces PR branches to be up to date with main
+            // before merge so a passing CI on a stale branch doesn't slip in.
+            try {
+              await github.rest.repos.updateBranchProtection({
+                owner,
+                repo,
+                branch,
+                required_status_checks: {
+                  strict: true,
+                  contexts: ['Python syntax + ruff smoke', 'Node .cjs syntax']
+                },
+                enforce_admins: false,
+                required_pull_request_reviews: null,
+                restrictions: null,
+                allow_force_pushes: false,
+                allow_deletions: false,
+                required_linear_history: true
+              });
+              core.info(`Branch protection for ${branch} ensured.`);
+            } catch (e) {
+              core.warning('Failed to update branch protection (likely missing ADMIN_GH_TOKEN with admin:repo scope): ' + e.message);
+            }
