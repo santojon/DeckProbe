@@ -22,16 +22,6 @@ or a git submodule.
 > uses the [MShawon/github-clone-count-badge](https://github.com/MShawon/github-clone-count-badge)
 > action to write the rolling total into a public gist that
 > shields.io renders. To wire it up:
-> 1. Create a public gist with a single file named `clone.json`.
-> 2. Copy the gist id (the alphanumeric segment of the gist URL) into
->    the `GIST_ID` repository **variable** (Settings → Secrets and
->    variables → Actions → Variables).
-> 3. Create a `GIST_SECRET` repository **secret** with a Personal
->    Access Token (Classic) that has the `gist` scope.
-> 4. Replace `REPLACE_WITH_GIST_ID` in the badge URL above with the
->    same id (the workflow doesn't touch the README — only the gist).
-> The scheduled workflow runs daily; the first run populates the gist
-> and the badge starts rendering on the next push.
 
 ## What's in the box
 
