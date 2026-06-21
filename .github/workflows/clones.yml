@@ -59,7 +59,7 @@ jobs:
           gist = gh(f"https://api.github.com/gists/{gist_id}")
           raw = gist.get("files", {}).get("clone.json", {}).get("content", "{}")
           try:
-              accumulated = json.loads(raw)
+              accumulated = json.loads(raw).get("dates", {})
           except Exception:
               accumulated = {}
 
@@ -85,5 +85,14 @@ jobs:
               data={"files": {"clone.json": {"content": json.dumps(payload, indent=2)}}},
           )
 
+          owner = repo.split("/")[0]
+          gist_url = f"https://gist.github.com/{owner}/{gist_id}"
+          raw_url  = f"https://gist.githubusercontent.com/{owner}/{gist_id}/raw/clone.json"
+          badge = (
+              f"[![GitHub Clones](https://img.shields.io/badge/dynamic/json"
+              f"?url={raw_url}&label=clones&query=%24.total&color=blue&logo=github)]"
+              f"({gist_url})"
+          )
           print(f"Updated gist {gist_id}: {total_clones} clones, {total_uniques} unique")
+          print(f"\nBadge markdown:\n{badge}")
           EOF
