@@ -47,27 +47,24 @@ def _resolve_anchored(p):
 
 
 def run_screenshot(args):
-    # screenshot.py is project-specific. Locate via --script CLI arg,
-    # DECKPROBE_SCREENSHOT_SCRIPT env (set by deckprobe.config.json), or
-    # the conventional `scripts/deckprobe-ext/screenshots/screenshot.py`.
-    env_script = os.environ.get('DECKPROBE_SCREENSHOT_SCRIPT', '')
+    # Drives the modular runner (deckprobe.screenshots.run), loading project
+    # scenarios from the configured scenarios dir. Run as a module from the
+    # repo root so the package's relative imports resolve regardless of how
+    # deep deckprobe is vendored.
     repo_root = os.path.abspath(os.path.join(HERE, '..'))
-    candidates = [
-        _resolve_anchored(args.script),
-        _resolve_anchored(env_script),
-        os.path.join(repo_root, 'scripts', 'deckprobe-ext', 'screenshots', 'screenshot.py'),
-    ]
-    path = next((c for c in candidates if c and os.path.isfile(c)), None)
-    if not path:
-        print('screenshot.py not found (set --script, DECKPROBE_SCREENSHOT_SCRIPT, or add `screenshots_script` to deckprobe.config.json)', file=sys.stderr); return 2
+    scenarios_dir = _resolve_anchored(
+        args.scenarios_dir or os.environ.get('DECKPROBE_SCREENSHOTS_SCENARIOS_DIR', '')
+    )
+    out_dir = _resolve_anchored(os.environ.get('DECKPROBE_SCREENSHOTS_DIR', '') or 'assets/screenshots')
     host = os.environ.get('DECK_CDP_HOST') or os.environ.get('DECK_HOST') or 'localhost'
     port = os.environ.get('DECK_CDP_PORT', '8081')
-    cmd = [sys.executable, path, "--host", host, "--port", port]
-    if args.locale:
-        cmd += ["--locale", args.locale]
-    if args.keep_existing:
-        cmd += ["--keep-existing"]
-    return subprocess.run(cmd).returncode
+    cmd = [sys.executable, '-m', 'deckprobe.screenshots.run',
+           '--host', host, '--port', str(port), '--out', out_dir]
+    if scenarios_dir:
+        cmd += ['--scenarios-dir', scenarios_dir]
+    if args.only:
+        cmd += ['--only', args.only]
+    return subprocess.run(cmd, cwd=repo_root).returncode
 
 def _diag_dirs(extra_dir):
     dirs = [os.path.join(HERE, 'diag')]
@@ -115,9 +112,8 @@ def main():
     p_probe.set_defaults(func=run_probe)
 
     p_ss = sub.add_parser('screenshot')
-    p_ss.add_argument('--keep-existing', action='store_true')
-    p_ss.add_argument('--locale', help='Locale code, e.g. en-US')
-    p_ss.add_argument('--script', default='', help='Path to project screenshot.py (also DECKPROBE_SCREENSHOT_SCRIPT env).')
+    p_ss.add_argument('--only', default='', help='Comma-separated scenario names to run (default: all).')
+    p_ss.add_argument('--scenarios-dir', default='', help='Dir with @register scenario *.py files (also DECKPROBE_SCREENSHOTS_SCENARIOS_DIR env / deckprobe.config.json `screenshots_scenarios_dir`).')
     p_ss.set_defaults(func=run_screenshot)
 
     p_diag = sub.add_parser('diag')

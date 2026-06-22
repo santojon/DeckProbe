@@ -26,7 +26,7 @@ _DECKPROBE_DIR = _THIS_DIR.parent
 CONFIG_ENV_MAP = {
     "diag_dirs":          "DECKPROBE_DIAG_DIRS",
     "uitests_suites_dir": "DECKPROBE_UITESTS_SUITES_DIR",
-    "screenshots_script": "DECKPROBE_SCREENSHOT_SCRIPT",
+    "screenshots_scenarios_dir": "DECKPROBE_SCREENSHOTS_SCENARIOS_DIR",
     "screenshots_dir":    "DECKPROBE_SCREENSHOTS_DIR",
     "perf_bench_config":  "DECKPROBE_PERF_BENCH_CONFIG",
 }

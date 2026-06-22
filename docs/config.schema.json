@@ -40,9 +40,9 @@
       "type": "string",
       "description": "Default --suites-dir for `python -m deckprobe.uitests.run`. Becomes DECKPROBE_UITESTS_SUITES_DIR."
     },
-    "screenshots_script": {
+    "screenshots_scenarios_dir": {
       "type": "string",
-      "description": "Default project screenshot driver script. Becomes DECKPROBE_SCREENSHOT_SCRIPT."
+      "description": "Default --scenarios-dir for `python -m deckprobe.screenshots.run` (dir of @register scenario *.py). Becomes DECKPROBE_SCREENSHOTS_SCENARIOS_DIR."
     },
     "screenshots_dir": {
       "type": "string",

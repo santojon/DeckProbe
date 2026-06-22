@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Modular screenshot runner. Iterates registered scenarios in
-`deckprobe/screenshots/scenarios/` and writes captures to
-`assets/screenshots/`. Drop-in replacement for the monolithic
-`screenshot.py` — same output filenames for the existing required set,
-plus extra captures.
+Modular screenshot runner. Iterates registered scenarios from the
+project's `--scenarios-dir` and writes captures to the output dir
+(`assets/screenshots/` for Deck Shelves). Each capture is a small
+`@register`-decorated function, so the required set plus extras all come
+from one place.
 
 Usage:
     python3 -m deckprobe.screenshots.run \
         --host <deck-host> [--port 8080] [--out assets/screenshots] \
+        --scenarios-dir scripts/deckprobe-ext/screenshots/scenarios \
         [--only home,qam,about_overview]
 
 Surface dispatch:

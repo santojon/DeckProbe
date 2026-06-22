@@ -153,8 +153,9 @@ command line still trumps the file.
   // Default suites directory for `uitests`.
   "uitests_suites_dir": "scripts/deckprobe-ext/uitests/suites",
 
-  // Default screenshots driver script.
-  "screenshots_script": "scripts/deckprobe-ext/screenshots/screenshot.py",
+  // Default scenarios dir for the modular screenshot runner
+  // (`python -m deckprobe.screenshots.run`).
+  "screenshots_scenarios_dir": "scripts/deckprobe-ext/screenshots/scenarios",
 
   // Where captured screenshots land. Optional — defaults to
   // `<parent-root>/screenshots/` (created on first use). Override per
@@ -216,3 +217,9 @@ your plugin.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## About
+
+DeckProbe is developed by [Jonathan Santos](https://github.com/santojon).
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/santojon)
