@@ -15,6 +15,8 @@
     "diag:run": "python3 cli.py diag run",
     "perf:bench": "python3 perf-bench.py",
     "uitests": "cd .. && python3 -m deckprobe.uitests.run",
-    "uitests:list": "cd .. && python3 -m deckprobe.uitests.run --list"
+    "uitests:list": "cd .. && python3 -m deckprobe.uitests.run --list",
+    "update": "pnpm update --latest && pnpm install",
+    "update:check": "pnpm outdated || true"
   }
 }
