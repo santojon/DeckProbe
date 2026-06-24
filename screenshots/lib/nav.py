@@ -69,6 +69,13 @@ CLOSE_QAM_EXPR = """
 
 _NAVIGATE_HOME_EXPR = """
 (function(){
+  // Instance.Navigate is the only method that reliably leaves a sticky DS
+  // full-page route (About / Settings) and lands on the home — must run in
+  // SharedJSContext where SteamUIStore lives.
+  try {
+    var inst = SteamUIStore?.WindowStore?.GamepadUIMainWindowInstance;
+    if (inst?.Navigate) { inst.Navigate('/library/home'); return 'instance.Navigate'; }
+  } catch(e) {}
   try {
     var nav = SteamUIStore?.WindowStore?.GamepadUIMainWindowInstance?.m_Navigator;
     if (nav?.Home) { nav.Home(); return 'navigator.Home'; }
@@ -144,6 +151,14 @@ _DS_PLUGIN_CLICK = """
 })()
 """
 
+_QAM_PLUGIN_SCROLL_DOWN = """
+(function(){
+  var ps = document.querySelectorAll('[class*=scroll],[style*=overflow]');
+  for (var p of ps) { if (p.scrollHeight > p.clientHeight) { p.scrollTop += 200; return 'scrolled'; } }
+  return 'no-scroll';
+})()
+"""
+
 _CLICK_MAINMENU_HOME_EXPR = """
 (function(){
   var candidates = Array.from(document.querySelectorAll(
@@ -195,6 +210,18 @@ def _qam_eval(host: str, port: int, expr: str) -> Any:
         return None
 
 
+def _mainmenu_eval(host: str, port: int, expr: str) -> Any:
+    """Run a JS expression in the Steam main-menu (Steam button) target."""
+    try:
+        sess = open_session(host, port, "MainMenu")
+        try:
+            return sess.evaluate(expr)
+        finally:
+            sess.close()
+    except Exception:
+        return None
+
+
 def _escape_bp(host: str, port: int, count: int = 1) -> None:
     """Send `count` Escape keypresses to the Big Picture window."""
     try:
@@ -223,6 +250,30 @@ def _is_qam_open(host: str, port: int) -> bool:
     return result is True
 
 
+_MODAL_OPEN_CHECK = """
+(function(){
+  var els = document.querySelectorAll('[class*=Modal]');
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].getBoundingClientRect().height > 50) return true;
+  }
+  return false;
+})()
+"""
+
+
+def _dismiss_bp_modal(host: str, port: int, max_tries: int = 4) -> None:
+    """Close any open Decky/Steam modal in Big Picture via Escape.
+
+    Escape is only sent while a modal is actually present, so on a clean home
+    (where Escape would pop the Steam menu) nothing is dispatched.
+    """
+    for _ in range(max_tries):
+        if _bp_eval(host, port, _MODAL_OPEN_CHECK) is not True:
+            return
+        _escape_bp(host, port, 1)
+        time.sleep(0.5)
+
+
 def open_qam(sjc: Session, settle_ms: int = 1500) -> None:
     try:
         sjc.evaluate(OPEN_QAM_EXPR)
@@ -247,6 +298,21 @@ def navigate_home(sjc: Session, settle_ms: int = 2000) -> None:
     time.sleep(settle_ms / 1000.0)
 
 
+def home_via_mainmenu(sjc: Session, host: str, port: int, settle_ms: int = 3000) -> bool:
+    """Land on a clean Home via Steam's main menu — open it, then click its
+    top item (the Home entry, language-agnostic), which forcibly navigates
+    home and disposes overlays. Returns True when the menu path was used."""
+    opened = sjc.evaluate(_OPEN_MAINMENU_EXPR)
+    if not (isinstance(opened, str) and opened.startswith("open-")):
+        return False
+    time.sleep(1.5)
+    clicked = _mainmenu_eval(host, port, _CLICK_MAINMENU_HOME_EXPR)
+    if clicked == "clicked":
+        time.sleep(max(settle_ms / 1000.0, 3.0))
+        return True
+    return False
+
+
 def navigate(sjc: Session, route: str, settle_ms: int = 2000) -> None:
     if route in ("/library/home", "/library"):
         navigate_home(sjc, settle_ms=settle_ms)
@@ -268,6 +334,26 @@ def navigate(sjc: Session, route: str, settle_ms: int = 2000) -> None:
 
 def navigate_about(sjc: Session, settle_ms: int = 2000) -> None:
     navigate(sjc, _ABOUT_ROUTE, settle_ms)
+
+
+def click_qam_button(host: str, port: int, svg_hint: str, index: int = 0) -> bool:
+    """Click a button in the QAM target whose SVG markup contains `svg_hint`.
+
+    Used for the title-bar icons (book = About `M4 19.5A2.5`, gear = Settings
+    `M19.4 15a1.65`) and toolbar actions, matching the legacy capturer.
+    """
+    expr = """
+(function(){
+  var btns = document.querySelectorAll('button');
+  var m = [];
+  for (var i = 0; i < btns.length; i++) {
+    if ((btns[i].innerHTML || '').indexOf(%r) !== -1) m.push(btns[i]);
+  }
+  if (m[%d]) { m[%d].click(); return 'clicked'; }
+  return 'not-found';
+})()
+""" % (svg_hint, index, index)
+    return _qam_eval(host, port, expr) == "clicked"
 
 
 def click_selector(sjc: Session, selector: str, settle_ms: int = 600) -> bool:
@@ -305,17 +391,22 @@ def dismiss_bp_modals(host: str, port: int) -> None:
 def ensure_bp_clean(sjc: Session, host: str, port: int) -> None:
     """Navigate to a clean home screen without overlays.
 
-    Closes QAM if open, then navigates from within the Big Picture window
-    (not SJC — SJC navigation opens the Steam menu overlay as a side effect).
+    Preferred path is Steam's main menu (open → click the top/Home item),
+    which lands on a clean Home regardless of language and disposes any open
+    QAM / overlay. Falls back to a Big-Picture-window navigation when the
+    main-menu entry points aren't available on this build.
     """
-    if _is_qam_open(host, port):
-        try:
-            sjc.evaluate(CLOSE_QAM_EXPR)
-        except Exception:
-            pass
-        time.sleep(1.0)
-    # Navigate from BP, not SJC. SJC's Router.Navigate('/library/home')
-    # triggers the Steam main-menu navigation overlay; BP's own Router does not.
+    # Close any leftover modal first (Escape only fires while one is open).
+    _dismiss_bp_modal(host, port)
+    # Reliable route change in SJC — leaves a sticky DS full-page route
+    # (About / Settings) that the main menu can't dismiss, and lands home.
+    navigate_home(sjc, settle_ms=2000)
+    if _bp_eval(host, port, "!!document.getElementById('deck-shelves-home-root')") is True:
+        return
+    # Not home yet (an overlay / Steam menu is up) — use the main menu, then
+    # fall back to a BP-window navigation.
+    if home_via_mainmenu(sjc, host, port):
+        return
     _bp_eval(host, port, _NAVIGATE_HOME_EXPR)
     time.sleep(3.0)
 
@@ -397,8 +488,11 @@ def click_context_menu_delete(host: str, port: int) -> str:
   var items = document.querySelectorAll('[class*=_MenuItem], [class*=contextMenuItem], [role=menuitem]');
   for (var el of items) {
     var text = (el.textContent || '').trim();
-    if (text === 'Delete' || text === 'Apagar' || text === 'Deletar' ||
-        text.indexOf('Remov') !== -1 || text.indexOf('Exclu') !== -1) {
+    // Contains-match — the item reads "Apagar prateleira" / "Delete shelf" etc.
+    if (text.indexOf('Delete') !== -1 || text.indexOf('Apagar') !== -1 ||
+        text.indexOf('Deletar') !== -1 || text.indexOf('Remov') !== -1 ||
+        text.indexOf('Exclu') !== -1 || text.indexOf('Supprim') !== -1 ||
+        text.indexOf('Löschen') !== -1) {
       el.click(); return 'clicked:' + text;
     }
   }
@@ -446,38 +540,39 @@ def _try_navigate_ds_tab(host: str, port: int) -> bool:
 
 
 def navigate_to_ds_qam(sjc: Session, host: str, port: int, settle_ms: int = 2000) -> bool:
-    """Open QAM and ensure Deck Shelves plugin tab is active.
+    """Open the QAM and ensure the Deck Shelves plugin tab is active.
 
-    No Escape keypresses — Escape on the home screen toggles the Steam menu.
-    Navigation is done from the Big Picture window (not SJC) to avoid opening
-    the Steam menu overlay as a side-effect.
-
-      1. Close QAM if open (avoid toggle-close)
-      2. Navigate home from BP
-      3. Open QAM fresh
-      4. Navigate to DS tab (with retry: close/reopen if first attempt fails)
+    The QAM open/closed state is not reliably observable on current Steam
+    builds — the QuickAccess CDP target keeps its DOM (7 tab nodes) whether
+    the panel is shown or hidden — so a toggle-based open/close desyncs and
+    silently closes the panel. Instead we verify the `.deck-shelves-qam-scope`
+    after each action and retry, flipping the QAM toggle between attempts so
+    that within a couple of passes a tab click lands while the panel is open.
+    Home nav runs in the Big Picture window (SJC nav would pop the Steam menu
+    overlay); any leftover modal is closed first.
     """
-    # Phase 1: Close QAM if open.
-    if _is_qam_open(host, port):
-        try:
-            sjc.evaluate(CLOSE_QAM_EXPR)
-        except Exception:
-            pass
-        time.sleep(1.0)
-
-    # Phase 2: Navigate home from BP (not SJC — avoids Steam menu overlay).
+    _dismiss_bp_modal(host, port)
     _bp_eval(host, port, _NAVIGATE_HOME_EXPR)
-    time.sleep(2.5)
+    time.sleep(1.5)
 
-    # Phase 3: Open QAM fresh.
-    open_qam(sjc, settle_ms=settle_ms)
-
-    # Phase 4: Navigate to Deck Shelves tab — first attempt.
-    if _try_navigate_ds_tab(host, port):
-        return True
-
-    # Retry: close QAM, reopen, try once more.
-    close_qam(sjc, settle_ms=800)
-    time.sleep(0.5)
-    open_qam(sjc, settle_ms=2000)
-    return _try_navigate_ds_tab(host, port)
+    for _attempt in range(5):
+        if _qam_eval(host, port, _DS_SCOPE_CHECK) is True:
+            return True
+        # Try to reach DS inside the (possibly open) QAM: Decky tab first.
+        _qam_eval(host, port, _sub_sel(_DECKY_TAB_CLICK))
+        time.sleep(1.2)
+        if _qam_eval(host, port, _DS_SCOPE_CHECK) is True:
+            return True
+        # Then the "Deck Shelves" plugin-list entry, with a scroll retry.
+        for _ in range(2):
+            res = _qam_eval(host, port, _DS_PLUGIN_CLICK)
+            time.sleep(1.0)
+            if _qam_eval(host, port, _DS_SCOPE_CHECK) is True:
+                return True
+            if res == "not-found":
+                _qam_eval(host, port, _QAM_PLUGIN_SCROLL_DOWN)
+                time.sleep(0.6)
+        # Not reached — flip the QAM toggle (handles a closed panel) and retry.
+        sjc.evaluate(OPEN_QAM_EXPR)
+        time.sleep(1.6)
+    return False

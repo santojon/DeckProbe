@@ -123,6 +123,23 @@ def _qam_panel_clip(session: Session) -> Optional[dict]:
     return rect
 
 
+# A Decky/Steam modal overlay paints a frosted-glass `backdrop-filter: blur()`
+# scrim. Under fromSurface=true that blur bleeds onto the modal content (the
+# whole capture comes out blurry); the system-compositor surface
+# (fromSurface=false) composites backdrop-filter correctly, so we switch
+# surfaces only when a modal is actually on screen — non-modal captures (home,
+# about, settings, context menus) keep their existing fromSurface=true path.
+_MODAL_PRESENT_EXPR = """
+(function(){
+  var els = document.querySelectorAll('[class*=ModalOverlay],[class*=ModalPosition]');
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].getBoundingClientRect().height > 50) return true;
+  }
+  return false;
+})()
+"""
+
+
 def capture_bigpicture(host: str, port: int, out_path: Path) -> Optional[Path]:
     targets = list_targets(host, port)
     target = find_target(targets, BIGPICTURE_TITLE_SUBSTRING)
@@ -130,7 +147,12 @@ def capture_bigpicture(host: str, port: int, out_path: Path) -> Optional[Path]:
         return None
     sess = Session.open(host, port, target)
     try:
-        return _capture(sess, out_path, from_surface=True)
+        modal = False
+        try:
+            modal = sess.evaluate(_MODAL_PRESENT_EXPR) is True
+        except Exception:
+            pass
+        return _capture(sess, out_path, from_surface=not modal)
     finally:
         sess.close()
 
