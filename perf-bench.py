@@ -269,7 +269,12 @@ def main() -> int:
     parser.add_argument("--target", default="Big Picture")
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--json-out", default="")
-    args = parser.parse_args()
+    # Nested `pnpm --filter ... perf:bench -- --runs N` forwards a leading `--`
+    # separator; drop it so argparse sees the real flags.
+    argv = sys.argv[1:]
+    if argv and argv[0] == "--":
+        argv = argv[1:]
+    args = parser.parse_args(argv)
 
     cfg = _load_config(args.config or None)
     env_host, env_port = load_env()

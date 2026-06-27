@@ -50,7 +50,11 @@ def _load_dotenv(path: Path) -> None:
                 k, v = ln.split("=", 1)
                 k = k.strip()
                 v = v.strip().strip('"').strip("'")
-                if k and k not in os.environ:
+                # The project .env is the source of truth for the device
+                # connection. Override any stale shell value (e.g. a generic
+                # `DECK_HOST=steamdeck` in the user's profile) — matches
+                # `perf-test.sh`'s `set -a; source .env` behaviour.
+                if k:
                     os.environ[k] = v
     except Exception:
         pass
