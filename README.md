@@ -6,7 +6,6 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](#requirements)
 [![Node](https://img.shields.io/badge/node-18%2B-brightgreen?logo=node.js&logoColor=white)](#requirements)
 [![Platform](https://img.shields.io/badge/platform-Steam%20OS-purple?logo=steamdeck&logoColor=white)](https://github.com/ValveSoftware/SteamOS)
-[![Plugin host](https://img.shields.io/badge/plugin%20host-Decky-purple.svg)](https://decky.xyz)
 
 Toolkit for developing Steam Deck plugins against a live device — CDP
 probes, screenshot pipeline, perf bench, UI-test runner. The scaffold

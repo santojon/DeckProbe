@@ -8,14 +8,14 @@
     "python": ">=3.10"
   },
   "scripts": {
-    "cli": "python3 cli.py",
-    "probe": "python3 cli.py probe",
-    "screenshots": "python3 cli.py screenshot",
-    "diag": "python3 cli.py diag list",
-    "diag:run": "python3 cli.py diag run",
-    "perf:bench": "python3 perf-bench.py",
-    "uitests": "cd .. && python3 -m deckprobe.uitests.run",
-    "uitests:list": "cd .. && python3 -m deckprobe.uitests.run --list",
+    "cli": "node scripts/py.mjs cli.py",
+    "probe": "node scripts/py.mjs cli.py probe",
+    "screenshots": "node scripts/py.mjs cli.py screenshot",
+    "diag": "node scripts/py.mjs cli.py diag list",
+    "diag:run": "node scripts/py.mjs cli.py diag run",
+    "perf:bench": "node scripts/py.mjs perf-bench.py",
+    "uitests": "cd .. && node deckprobe/scripts/py.mjs -m deckprobe.uitests.run",
+    "uitests:list": "cd .. && node deckprobe/scripts/py.mjs -m deckprobe.uitests.run --list",
     "update": "pnpm update --latest && pnpm install",
     "update:check": "pnpm outdated || true"
   }

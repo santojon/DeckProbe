@@ -109,6 +109,10 @@ python3 deckprobe/perf-bench.py
 python3 -m deckprobe.uitests.run --list
 ```
 
+> On Windows, `python3` may not be on PATH — use `python` / `py -3`, or the
+> `pnpm --filter deckprobe …` flows below, which resolve the interpreter
+> cross-OS (`py -3` / `python` / `python3`) through `deckprobe/scripts/py.mjs`.
+
 Or, when the consumer wires the toolkit as a `pnpm` workspace package,
 through the pnpm flows:
 

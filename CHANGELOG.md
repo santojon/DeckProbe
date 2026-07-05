@@ -3,6 +3,18 @@
 > Support tooling. No releases, no semver. Entries are logged by date
 > for traceability only.
 
+## [2026-07-05]
+
+- **Cross-OS Python launcher (`scripts/py.mjs`)** — resolves a Python 3
+  interpreter (`py -3` → `python` → `python3`, Windows-first `py -3` to dodge the
+  Microsoft Store `python3.exe` stub) and forwards args to it. Every `pnpm`
+  script now runs through it (`node scripts/py.mjs …` instead of `python3 …`), so
+  `cli` / `probe` / `screenshots` / `diag` / `diag:run` / `perf:bench` / `uitests`
+  / `uitests:list` work natively on **Windows, macOS, SteamOS, and Linux** —
+  `python3` no longer needs to be on PATH.
+- `CONTRIBUTING.md` notes the Windows interpreter fallback (`python` / `py -3`)
+  and that the pnpm flows resolve it via the launcher.
+
 ## [2026-06-17]
 
 - Generic-toolkit framing across all docs, comments, and examples.

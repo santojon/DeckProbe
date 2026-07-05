@@ -186,10 +186,15 @@ def open_session(host: str, port: int, title_substring: str) -> Session:
 
 
 def load_env(env_path: str | None = None) -> tuple[str, int]:  # noqa: C901
-    """Load DECK_HOST and DECK_CDP_PORT from .env file and environment."""
+    """Load the CDP host and port from .env file and environment.
+
+    DECK_CDP_HOST (a CDP-reachable address) takes precedence over DECK_HOST,
+    which may be an ssh-config alias that getaddrinfo cannot resolve.
+    """
     import os
     from pathlib import Path
     host = os.environ.get("DECK_HOST", "")
+    cdp_host = os.environ.get("DECK_CDP_HOST", "")
     port = int(os.environ.get("DECK_CDP_PORT", "8081") or "8081")
     candidates = [env_path] if env_path else []
     # Walk up from this file to find .env in repo root
@@ -212,6 +217,8 @@ def load_env(env_path: str | None = None) -> tuple[str, int]:  # noqa: C901
                 k, v = k.strip(), v.strip().strip('"').strip("'")
                 if k == "DECK_HOST" and not host:
                     host = v
+                elif k == "DECK_CDP_HOST" and not cdp_host:
+                    cdp_host = v
                 elif k == "DECK_CDP_PORT" and v:
                     try:
                         port = int(v)
@@ -219,4 +226,4 @@ def load_env(env_path: str | None = None) -> tuple[str, int]:  # noqa: C901
                         pass
         except OSError:
             pass
-    return host, port
+    return cdp_host or host, port

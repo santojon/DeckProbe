@@ -59,7 +59,10 @@ def _load_external_suites(suites_dir: str) -> None:
 
 
 def _load_env() -> tuple[str, int]:
+    # DECK_CDP_HOST (a CDP-reachable address) wins over DECK_HOST, which may be
+    # an ssh-config alias that getaddrinfo cannot resolve.
     host = os.environ.get("DECK_HOST", "")
+    cdp_host = os.environ.get("DECK_CDP_HOST", "")
     port = int(os.environ.get("DECK_CDP_PORT", "8080") or "8080")
     env_path = REPO_ROOT / ".env"
     if env_path.exists():
@@ -71,12 +74,14 @@ def _load_env() -> tuple[str, int]:
             k, v = k.strip(), v.strip().strip('"').strip("'")
             if k == "DECK_HOST" and not host:
                 host = v
+            elif k == "DECK_CDP_HOST" and not cdp_host:
+                cdp_host = v
             elif k == "DECK_CDP_PORT" and v:
                 try:
                     port = int(v)
                 except ValueError:
                     pass
-    return host, port
+    return cdp_host or host, port
 
 
 def main() -> int:
