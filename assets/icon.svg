@@ -1,4 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="DeckProbe"
      style="shape-rendering:geometricPrecision; fill-rule:evenodd; clip-rule:evenodd">
-  <polyline points="86,256 190,256 236,150 284,366 330,256 426,256" fill="none" stroke="#94A3B8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <style>
+    .steam-blue { fill: #94A3B8; }
+    .steam-blue-dark { fill: #475569; }
+    .steam-light { fill: #FFFFFF; }
+    .steam-light-soft { fill: #D2D2D2; }
+    .steam-stroke-dark { stroke: #000000; stroke-width: 2; stroke-linejoin: round; }
+    .round { rx: 8; ry: 8; }
+    .stroke-blue { stroke: #94A3B8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .stroke-blue-dark { stroke: #475569; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+  <polyline points="86,256 190,256 236,150 284,366 330,256 426,256" class="stroke-blue" stroke-width="30"/>
 </svg>
