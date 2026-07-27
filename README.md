@@ -1,5 +1,11 @@
 # DeckProbe
 
+<div align="center">
+<p>
+  <img src="assets/logo.svg" alt="DeckProbe" width="352">
+</p>
+</div>
+
 [![CI](https://github.com/santojon/DeckProbe/actions/workflows/ci.yml/badge.svg)](https://github.com/santojon/DeckProbe/actions/workflows/ci.yml)
 [![GitHub Clones](https://img.shields.io/badge/dynamic/json?url=https://gist.githubusercontent.com/santojon/e9076336e3c8c824f4e7a3ab9303a3b9/raw/clone.json&label=clones&query=%24.total&color=blue&logo=github)](https://gist.github.com/santojon/e9076336e3c8c824f4e7a3ab9303a3b9)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
