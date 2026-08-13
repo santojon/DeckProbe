@@ -27,6 +27,10 @@ Subcommands:
 - screenshot          Save a PNG of a target's viewport.
 - console             Stream `console.{log,warn,error}` and uncaught
                       exceptions from a target until Ctrl-C.
+- click               Click the smallest visible element whose text matches
+                      (case-insensitive). Dispatches real Input.dispatchMouseEvent
+                      events — Steam's GamepadUI Focusable rows generally don't
+                      react to a plain JS .click().
 
 Examples:
 - python3 deckprobe/cdp.py targets
@@ -35,6 +39,7 @@ Examples:
     | python3 deckprobe/cdp.py eval bp -
 - python3 deckprobe/cdp.py screenshot bp /tmp/bp.png
 - python3 deckprobe/cdp.py console sjc
+- python3 deckprobe/cdp.py click qam "Deck Shelves"
 """
 from __future__ import annotations
 import argparse
@@ -49,11 +54,11 @@ from typing import Any
 
 def _load_dotenv() -> None:
     """Minimal `.env` parser — populates `os.environ` from the repo's `.env`
-    if the user hasn't already exported the variables. Repo root is three
-    levels up from this script.
+    if the user hasn't already exported the variables. Repo root is one
+    level up from this script (deckprobe/cdp.py -> deckprobe/ -> repo root).
     """
     here = os.path.dirname(__file__)
-    env_path = os.path.abspath(os.path.join(here, "..", "..", "..", ".env"))
+    env_path = os.path.abspath(os.path.join(here, "..", ".env"))
     if not os.path.isfile(env_path):
         return
     try:
@@ -188,6 +193,68 @@ def cmd_screenshot(args: argparse.Namespace) -> int:
     return 0
 
 
+# Finds the smallest visible ancestor (width > 20px) of a leaf text node
+# matching `text` case-insensitively, and returns its bounding rect.
+_FIND_RECT_BY_TEXT_JS = """
+(function(){
+  const target = %s;
+  const els = Array.from(document.querySelectorAll('*')).filter(
+    e => e.children.length === 0 && (e.textContent || '').trim().toLowerCase() === target
+  );
+  if (!els.length) return null;
+  els.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+  let el = els[0];
+  for (let i = 0; i < 6 && el; i++) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 20) return JSON.stringify({x: r.x, y: r.y, w: r.width, h: r.height});
+    el = el.parentElement;
+  }
+  return null;
+})()
+"""
+
+
+def _runtime_eval(ws, expr: str) -> Any:
+    ws.send(json.dumps({"id": 1, "method": "Runtime.enable"}))
+    ws.recv()
+    ws.send(json.dumps({
+        "id": 2,
+        "method": "Runtime.evaluate",
+        "params": {"expression": expr, "returnByValue": True, "awaitPromise": True},
+    }))
+    while True:
+        msg = json.loads(ws.recv())
+        if msg.get("id") == 2:
+            return msg.get("result", {}).get("result", {}).get("value")
+
+
+def cmd_click(args: argparse.Namespace) -> int:
+    """Click the smallest visible element whose trimmed text matches (case-
+    insensitive), via a real mouse press/release at its centre — not a JS
+    .click(), which Steam's GamepadUI Focusable rows mostly ignore.
+    """
+    target = resolve_target(args.target)
+    ws = _ws_connect(target)
+    try:
+        rect_json = _runtime_eval(ws, _FIND_RECT_BY_TEXT_JS % json.dumps(args.text.lower()))
+        if not rect_json:
+            print(f"no visible element matched text: {args.text!r}", file=sys.stderr)
+            return 1
+        r = json.loads(rect_json)
+        cx, cy = r["x"] + r["w"] / 2, r["y"] + r["h"] / 2
+        for evt_type in ("mouseMoved", "mousePressed", "mouseReleased"):
+            ws.send(json.dumps({
+                "id": 3, "method": "Input.dispatchMouseEvent",
+                "params": {"type": evt_type, "x": cx, "y": cy, "button": "left", "clickCount": 1},
+            }))
+            ws.recv()
+            time.sleep(0.08)
+        print(f"clicked {args.text!r} at ({cx:.0f}, {cy:.0f})")
+        return 0
+    finally:
+        ws.close()
+
+
 def cmd_console(args: argparse.Namespace) -> int:
     """Stream console output and uncaught exceptions from a target.
     Useful while reproducing a UI bug — leave this running, trigger the
@@ -253,6 +320,11 @@ def main() -> int:
     p_shot.add_argument("target", help="Alias or target ID prefix.")
     p_shot.add_argument("output", help="Output PNG path.")
     p_shot.set_defaults(func=cmd_screenshot)
+
+    p_click = sub.add_parser("click", help="Click the element matching visible text.")
+    p_click.add_argument("target", help="Alias or target ID prefix.")
+    p_click.add_argument("text", help="Visible text to match (case-insensitive, exact after trim).")
+    p_click.set_defaults(func=cmd_click)
 
     p_log = sub.add_parser("console", help="Stream console output from a target.")
     p_log.add_argument("target", help="Alias or target ID prefix.")
