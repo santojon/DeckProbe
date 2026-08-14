@@ -336,6 +336,59 @@ def navigate_about(sjc: Session, settle_ms: int = 2000) -> None:
     navigate(sjc, _ABOUT_ROUTE, settle_ms)
 
 
+_FIND_ELEMENT_AFTER_TEXT_EXPR = """
+(function(){
+  var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  var n, anchor = null;
+  while ((n = walker.nextNode())) {
+    if ((n.textContent || '').trim().toLowerCase() === %r) { anchor = n; break; }
+  }
+  if (!anchor) return null;
+  var el = anchor.parentElement;
+  for (var i = 0; i < 5 && el; i++) {
+    if (el.getAttribute && el.getAttribute('tabindex') !== null) break;
+    el = el.parentElement;
+  }
+  var sib = el ? el.nextElementSibling : null;
+  if (!sib) return null;
+  var r = sib.getBoundingClientRect();
+  return JSON.stringify({x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2)});
+})()
+"""
+
+
+def click_element_after_text(host: str, port: int, anchor_text: str, settle_ms: int = 1500) -> bool:
+    """Click the tab-strip item that immediately follows the one whose label
+    matches `anchor_text` (case-insensitive), in the Big Picture window.
+
+    Useful when the actual target label can't be matched directly — e.g. it
+    collides with an unrelated element rendering the same translated string
+    elsewhere on the page (a page title sharing a tab's label), or the tab
+    strip renders it CSS-uppercased so `innerText`/`textContent` disagree —
+    but a nearby, unique sibling label can anchor the walk instead. Also
+    works around `Focusable`s that don't respond to a plain `.click()`, by
+    dispatching a real mouse click via CDP at the resolved element's center.
+    """
+    coords = _bp_eval(host, port, _FIND_ELEMENT_AFTER_TEXT_EXPR % anchor_text.lower())
+    if not coords:
+        return False
+    import json as _json
+    pos = _json.loads(coords)
+    try:
+        sess = open_session(host, port, "Big Picture")
+        try:
+            for t in ("mouseMoved", "mousePressed", "mouseReleased"):
+                sess.call("Input.dispatchMouseEvent", {
+                    "type": t, "x": pos["x"], "y": pos["y"], "button": "left", "clickCount": 1,
+                })
+        finally:
+            sess.close()
+    except Exception:
+        return False
+    time.sleep(settle_ms / 1000.0)
+    return True
+
+
 def click_qam_button(host: str, port: int, svg_hint: str, index: int = 0) -> bool:
     """Click a button in the QAM target whose SVG markup contains `svg_hint`.
 
@@ -498,6 +551,36 @@ def click_context_menu_delete(host: str, port: int) -> str:
   }
   return 'not-found';
 })()
+"""
+    result = _bp_eval(host, port, expr) or "no-result"
+    time.sleep(0.3)
+    return result
+
+
+def click_context_menu_hide_toggle(host: str, port: int, action: str) -> str:
+    """Click the 'Hide'/'Show' item in a Decky context menu (Big Picture DOM).
+
+    `action` is `"hide"` or `"show"` — picks which label to match, since a
+    shelf's ellipsis menu only ever offers whichever one applies to its
+    current state.
+    """
+    needles = {
+        "hide": ["Hide", "Ocultar", "Masquer", "ausblenden", "Nascondi"],
+        "show": ["Show", "Mostrar", "Afficher", "anzeigen", "Mostra"],
+    }[action]
+    needles_js = ", ".join(repr(n) for n in needles)
+    expr = f"""
+(function(){{
+  var needles = [{needles_js}];
+  var items = document.querySelectorAll('[class*=_MenuItem], [class*=contextMenuItem], [role=menuitem]');
+  for (var el of items) {{
+    var text = (el.textContent || '').trim();
+    for (var n of needles) {{
+      if (text.indexOf(n) !== -1) {{ el.click(); return 'clicked:' + text; }}
+    }}
+  }}
+  return 'not-found';
+}})()
 """
     result = _bp_eval(host, port, expr) or "no-result"
     time.sleep(0.3)

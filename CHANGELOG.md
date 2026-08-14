@@ -3,6 +3,24 @@
 > Support tooling. No releases, no semver. Entries are logged by date
 > for traceability only.
 
+## [2026-08-14]
+
+- **Fixed: external screenshot scenarios using a relative import (`from ._locale
+  import ...`) failed to load** — `run.py`'s `_load_external_scenarios` loaded
+  each file via `importlib.util.spec_from_file_location` under a synthetic
+  standalone module name, which has no package context, so any scenario file
+  with a relative import to a local sibling helper silently produced zero
+  captures. Now imported as a real (namespace) package instead, so scenario
+  files in a project's `--scenarios-dir` can share local helpers via relative
+  imports the same way any other Python package would.
+- Generalized a one-off tab-click helper in `screenshots/lib/nav.py`
+  (`click_element_after_text(host, port, anchor_text)`) — finds the tab-strip
+  item after the one matching `anchor_text` and dispatches a real mouse click
+  at its center via CDP. Useful whenever a target's own label can't be matched
+  directly (collides with another element rendering the same text elsewhere on
+  the page, or the label is CSS-transformed so `innerText`/`textContent`
+  disagree) but a nearby, unique label can anchor the walk instead.
+
 ## [2026-07-05]
 
 - **Cross-OS Python launcher (`scripts/py.mjs`)** — resolves a Python 3

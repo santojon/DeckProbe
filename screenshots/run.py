@@ -35,19 +35,22 @@ from .lib.registry import ALL_SCENARIOS  # noqa: E402
 
 
 def _load_external_scenarios(scenarios_dir: str) -> None:
-    import importlib.util
+    # Imported as a real (namespace) package — not via spec_from_file_location
+    # with a synthetic standalone module name — so scenario files can use
+    # relative imports for local siblings (e.g. `from ._locale import ...`)
+    # instead of every helper needing to live in deckprobe itself.
+    import importlib
     p = Path(scenarios_dir).resolve()
     if not p.is_dir():
         return
+    parent = str(p.parent)
+    if parent not in sys.path:
+        sys.path.insert(0, parent)
     for f in sorted(p.glob("*.py")):
         if f.name.startswith("_"):
             continue
-        spec = importlib.util.spec_from_file_location(f"_scenario_{f.stem}", f)
-        if not spec or not spec.loader:
-            continue
-        mod = importlib.util.module_from_spec(spec)
         try:
-            spec.loader.exec_module(mod)
+            importlib.import_module(f"{p.name}.{f.stem}")
         except Exception as e:
             print(f"[screenshots] failed to load {f.name}: {e}", file=sys.stderr)
 
