@@ -17,7 +17,7 @@ End-to-end examples for using the toolkit against a live Steam Deck.
 ## Connection setup
 
 DeckProbe expects an `.env` file at the parent repo root (the repo that
-contains the `devkit/` folder). The CLI auto-loads it before invoking
+contains the `deckprobe/` folder). The CLI auto-loads it before invoking
 any subcommand, so individual scripts never need to know about it.
 
 Minimum `.env`:
@@ -47,16 +47,16 @@ Steam — Big Picture.
 
 ```bash
 # List every diag script available (built-in + your project's)
-python3 devkit/cli.py diag list
+python3 deckprobe/cli.py diag list
 
 # Run a probe (target auto-resolved from a substring of its title)
-python3 devkit/cli.py diag run diag_layout
+python3 deckprobe/cli.py diag run diag_layout
 
 # Smoke probe of the home: ensures mount + rows + cards are present
-python3 devkit/cli.py probe --mode smoke
+python3 deckprobe/cli.py probe --mode smoke
 
 # Inspect every row's title + card count + cards in the home mount
-python3 devkit/cli.py probe --mode rows
+python3 deckprobe/cli.py probe --mode rows
 ```
 
 The `cli.py` script forwards arguments straight to the chosen probe and
@@ -69,7 +69,7 @@ shared CDP helper, builds a JS expression as a string, and pipes the
 result to stdout:
 
 ```js
-// devkit/diag/diag_card_count.cjs
+// deckprobe/diag/diag_card_count.cjs
 'use strict';
 const { runAndPrint } = require('./_lib/cdp');
 
@@ -88,73 +88,80 @@ runAndPrint('bp', expr);
 Run it:
 
 ```bash
-node devkit/diag/diag_card_count.cjs
+node deckprobe/diag/diag_card_count.cjs
 ```
 
 When this exact expression runs against a plugin OTHER than the default
 project, `_lib/cdp.cjs` automatically swaps every default selector for
-the configured one (`DEVKIT_HOME_MOUNT_ID`, `DEVKIT_CARD_SEL`, …). No
+the configured one (`DECKPROBE_HOME_MOUNT_ID`, `DECKPROBE_CARD_SEL`, …). No
 edits required — write the probe once, run it everywhere.
 
 ## Retargeting to your plugin
 
 DeckProbe ships with selector defaults that match the Deck Shelves home
-mount. To target a different plugin's DOM:
+mount — its own reference project — but every one is overridable via env
+var (or a `deckprobe.config.json` at the parent repo root). To target a
+different plugin's DOM:
 
 ```bash
-DEVKIT_HOME_MOUNT_ID=my-plugin-home-root \
-DEVKIT_CARD_SEL='.card-grid > .card' \
-DEVKIT_ROW_SEL='.card-grid' \
-DEVKIT_QAM_SCOPE_SEL='.my-plugin-qam' \
-DEVKIT_ABOUT_ROUTE='/my-plugin/about' \
-python3 devkit/cli.py probe --mode smoke
+DECKPROBE_HOME_MOUNT_ID=my-plugin-home-root \
+DECKPROBE_CARD_SEL='.card-grid > .card' \
+DECKPROBE_ROW_SEL='.card-grid' \
+DECKPROBE_QAM_SCOPE_SEL='.my-plugin-qam' \
+DECKPROBE_ABOUT_ROUTE='/my-plugin/about' \
+python3 deckprobe/cli.py probe --mode smoke
 ```
 
-The full list lives in `devkit/lib/selectors.py` (Python) and
-`devkit/lib/selectors.cjs` (Node). Both files document every env var.
+The full list lives in `deckprobe/lib/selectors.py` (Python) and
+`deckprobe/lib/selectors.cjs` (Node). Both files document every env var;
+legacy `DEVKIT_<name>` vars are also still accepted, from before the
+toolkit's own rename to DeckProbe.
 
 For project-specific diag scripts that don't fit the generic pattern,
-drop them in `scripts/devkit-ext/` at the parent repo root and the CLI
-will pick them up automatically:
+point `DECKPROBE_DIAG_DIRS=...` at any folder hierarchy you prefer
+(colon-separated, like `PATH`) and the CLI picks them up automatically
+alongside the built-in ones — no fixed directory name required:
 
 ```
 my-plugin/
-├── devkit/                    # this toolkit (submodule or copy)
+├── deckprobe/                 # this toolkit (submodule or copy)
 ├── scripts/
-│   └── devkit-ext/
-│       └── diag/
+│   └── deckprobe-ext/         # matches the screenshot pipeline's own
+│       └── diag/              # --scenarios-dir convention below
 │           └── my_custom_probe.cjs
-└── .env
+└── .env                       # DECKPROBE_DIAG_DIRS=scripts/deckprobe-ext/diag
 ```
-
-You can also point `DEVKIT_DIAG_DIRS=...` at any folder hierarchy you
-prefer (colon-separated, like `PATH`).
 
 ## Screenshot pipeline
 
 ```bash
 # Take screenshots in every supported locale
-python3 devkit/cli.py screenshot
+python3 deckprobe/cli.py screenshot
 
 # Single locale only
-python3 devkit/cli.py screenshot --locale en-US
+python3 deckprobe/cli.py screenshot --locale en-US
 
 # Keep previous output instead of wiping `screenshots/out/`
-python3 devkit/cli.py screenshot --keep-existing
+python3 deckprobe/cli.py screenshot --keep-existing
 ```
 
-The pipeline navigates the deck through canonical states (home, QAM,
-about, settings detail panels), captures each, and writes localised
-results to `screenshots/out/<locale>/`. Point
-`DEVKIT_SCREENSHOT_SCRIPT=...` at a project-specific entry point if you
-need to customise the navigation flow.
+The runner underneath (`deckprobe/screenshots/run.py`) is surface-agnostic
+and knows nothing about any specific plugin's scenarios — point
+`--scenarios-dir` at your own project's scenario module (see
+`scripts/deckprobe-ext/` above) to customise which states get captured:
+
+```bash
+python3 -m deckprobe.screenshots.run \
+  --host <deck-host> --out assets/screenshots \
+  --scenarios-dir scripts/deckprobe-ext/screenshots/scenarios
+```
 
 ## Perf bench
 
 ```bash
-pnpm --filter @steamdeck/devkit perf:bench
+pnpm --filter deckprobe perf:bench
 # or
-python3 devkit/perf-bench.py
+python3 deckprobe/perf-bench.py
 ```
 
 Captures frame-time + memory snapshots over a configurable window. The
@@ -169,9 +176,9 @@ updates without code changes.
 
 ```bash
 CLASS_MAP='{"viewport":"_3PhG...","row":"ds-row-scroll","card":"ds-card"}' \
-DEVKIT_CLASS_MAP_GLOBAL=__MY_PLUGIN_CLASS_MAP \
-DEVKIT_CLASS_MAP_LS_KEY=my_plugin_class_map \
-python3 devkit/tools/inject_classmap.py
+DECKPROBE_CLASS_MAP_GLOBAL=__MY_PLUGIN_CLASS_MAP \
+DECKPROBE_CLASS_MAP_LS_KEY=my_plugin_class_map \
+python3 deckprobe/tools/inject_classmap.py
 ```
 
 The injector writes the map to both `window[...GLOBAL]` (live) and

@@ -1,9 +1,9 @@
 """
-Generic CDP (Chrome DevTools Protocol) session wrapper for Deck Shelves devtools.
+Generic CDP (Chrome DevTools Protocol) session wrapper for DeckProbe.
 
 This is the canonical implementation. Both the screenshot pipeline
-(devkit/screenshots/) and the UI test runner
-(devkit/uitests/) import from here.
+(deckprobe/screenshots/) and the UI test runner
+(deckprobe/uitests/) import from here.
 
 The screenshots/lib/cdp.py and uitests shims re-export this module for
 backwards-compatibility with any existing import paths.
@@ -51,7 +51,7 @@ def _ws_handshake(host: str, port: int, path: str) -> socket.socket:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(15)
     sock.connect((_normalize_host(host), port))
-    key = base64.b64encode(b"devkit-cdp-ws-1234567890ab").decode()
+    key = base64.b64encode(b"deckprobe-cdp-ws-1234567890").decode()
     req = (
         f"GET {path} HTTP/1.1\r\n"
         f"Host: {host}:{port}\r\n"

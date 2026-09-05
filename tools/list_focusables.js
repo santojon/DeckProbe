@@ -1,3 +1,6 @@
+// Lists every card-sized (>=120x150) Focusable Panel on the current screen
+// — a quick way to see what's actually focusable before writing a more
+// targeted probe. Fully generic, no plugin-specific selectors.
 (function(){
   try {
     var win = SteamUIStore.WindowStore.GamepadUIMainWindowInstance.BrowserWindow;

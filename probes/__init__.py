@@ -1,5 +1,5 @@
 """
-Deck Shelves — CDP diagnostic probes.
+CDP diagnostic probes.
 
 Run any script directly:
     python3 deckprobe/probes/menu_injection.py

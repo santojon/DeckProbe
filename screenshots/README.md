@@ -1,8 +1,8 @@
-# `devkit/screenshots` — localised screenshot pipeline
+# `deckprobe/screenshots` — localised screenshot pipeline
 
 Drives the QAM to take per-locale screenshots used in release
-publishing. Until the split, the runner lives at
-`devkit/screenshots/`. The package script
+publishing. The runner lives at `deckprobe/screenshots/`. The package
+script
 
 ```bash
 pnpm screenshots

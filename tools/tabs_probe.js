@@ -1,3 +1,8 @@
+// Lists every [data-tab-id] tab on screen (native or plugin-added), and for
+// each one, the app ids visible under it — both by reading the DOM and by
+// probing every global object for a method name a tab-data API commonly
+// uses. Handy for coexistence testing between plugins that both add home
+// tabs, or for finding an app-data API you didn't know a tab exposed.
 (function(){
   try {
     var win = SteamUIStore?.WindowStore?.GamepadUIMainWindowInstance?.BrowserWindow || window;
@@ -33,27 +38,6 @@
       } catch (e) { return []; }
     }
 
-    function tryStoreMethods(tabId){
-      var out = [];
-      var names = ['UnifiDeckStore','UnifyDeckStore','UnifideckStore','UnifiDeck','Unifideck','UnifyDeck'];
-      var methodNames = ['GetAppsForTab','GetTabApps','GetApps','GetAppsForCollection','GetAppsByTab','GetAppIDsForTab','GetAppsForCategory'];
-      for(var n=0;n<names.length;n++){
-        var obj = (win && win[names[n]]) || (window && window[names[n]]);
-        if(!obj) continue;
-        for (var m=0;m<methodNames.length;m++){
-          try{
-            var fn = obj[methodNames[m]];
-            if(typeof fn === 'function'){
-              var res = fn.call(obj, tabId);
-              if(Array.isArray(res)) out.push({source:names[n]+'.'+methodNames[m], value:res});
-              else if(res && typeof res === 'object' && Array.isArray(res.apps)) out.push({source:names[n]+'.'+methodNames[m], value:res.apps});
-            }
-          }catch(e){}
-        }
-      }
-      return out;
-    }
-
     function tryLibraryAPIs(tabId){
       var methods = ['GetAppsForTab','GetTabApps','GetVisibleAppsForTab','ResolveTabApps','GetAppsByTab','GetAppIDsForTab'];
       var outs = [];
@@ -85,7 +69,7 @@
     var results = {tabs: tabs.map(function(t){ return {id:t.id, name:t.name, snippet:t.snippet}; }), details: {}};
     for(var i=0;i<tabs.length;i++){
       var id = tabs[i].id || ('tab-'+i);
-      results.details[id]={ domApps: snapAppsFromDOMForTab(id), storeResults: tryStoreMethods(id), libraryAPIs: tryLibraryAPIs(id) };
+      results.details[id]={ domApps: snapAppsFromDOMForTab(id), libraryAPIs: tryLibraryAPIs(id) };
     }
     return JSON.stringify(results);
   } catch (e) { return JSON.stringify({error:String(e), stack: e && e.stack}); }

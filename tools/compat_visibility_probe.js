@@ -1,3 +1,7 @@
+// Reads the native compat-badge visibility rules on Steam's own home cards
+// (CSS vars, hide rules). The `deck-shelves-home-root` id below only
+// excludes this repo's own reference plugin mount from the native search;
+// swap it for your own plugin's mount id (or drop the check).
 (function() {
   try {
     var win = SteamUIStore.WindowStore.GamepadUIMainWindowInstance.BrowserWindow;

@@ -5,7 +5,7 @@ Copy-paste recipes for common diagnostics.
 ## 1. Smoke test the home
 
 ```bash
-python3 devkit/cli.py probe --mode smoke
+python3 deckprobe/cli.py probe --mode smoke
 ```
 
 Returns `pass: true` when:
@@ -20,7 +20,7 @@ regression gate in CI.
 ## 2. Inspect every visible card in the first row
 
 ```js
-// devkit/diag/diag_first_row.cjs
+// deckprobe/diag/diag_first_row.cjs
 'use strict';
 const { runAndPrint } = require('./_lib/cdp');
 
@@ -43,13 +43,13 @@ runAndPrint('bp', expr);
 Run:
 
 ```bash
-node devkit/diag/diag_first_row.cjs
+node deckprobe/diag/diag_first_row.cjs
 ```
 
 ## 3. Read settings from the live cache
 
 ```js
-// devkit/diag/diag_settings_snapshot.cjs
+// deckprobe/diag/diag_settings_snapshot.cjs
 'use strict';
 const { runAndPrint } = require('./_lib/cdp');
 
@@ -74,7 +74,7 @@ substitutes selectors, not arbitrary storage keys.
 ## 4. Probe a fiber's React state
 
 ```js
-// devkit/diag/diag_fiber_state.cjs
+// deckprobe/diag/diag_fiber_state.cjs
 'use strict';
 const { runAndPrint } = require('./_lib/cdp');
 
@@ -105,7 +105,7 @@ runAndPrint('bp', expr);
 
 ```bash
 # tail console for 30 s, filtering on `[DS]` and `deck-shelves`
-node devkit/tools/console_capture.cjs <TARGET_ID> 30
+node deckprobe/tools/console_capture.cjs <TARGET_ID> 30
 ```
 
 The filter defaults to substrings derived from `DEVKIT_PROJECT_LABEL`
@@ -115,7 +115,7 @@ and `DEVKIT_ROW_SEL`; override the full list with
 ## 6. Open the QAM, click the Decky tab, click your plugin
 
 ```js
-// devkit/diag/qam_open_plugin.cjs
+// deckprobe/diag/qam_open_plugin.cjs
 'use strict';
 const { runAndPrint } = require('./_lib/cdp');
 
@@ -153,7 +153,7 @@ from the default project:
 DEVKIT_HOME_MOUNT_ID=my-plugin-home-root \
 DEVKIT_CARD_SEL='.tile' \
 DEVKIT_ROW_SEL='.tile-row' \
-python3 devkit/cli.py probe --mode rows
+python3 deckprobe/cli.py probe --mode rows
 ```
 
 The probe source still references `deck-shelves-home-root` and
@@ -163,15 +163,15 @@ The probe source still references `deck-shelves-home-root` and
 
 ```bash
 # Run every diag whose name contains "shelf"
-python3 devkit/cli.py diag list \
+python3 deckprobe/cli.py diag list \
   | grep shelf \
-  | xargs -n1 python3 devkit/cli.py diag run
+  | xargs -n1 python3 deckprobe/cli.py diag run
 ```
 
 ## 9. Sanity-check the price / online cache
 
 ```js
-// devkit/diag/diag_online_caches.cjs
+// deckprobe/diag/diag_online_caches.cjs
 'use strict';
 const { runAndPrint } = require('./_lib/cdp');
 
@@ -194,7 +194,7 @@ runAndPrint('shared', expr);
 ## 10. Capture a screenshot of the current QAM state
 
 ```bash
-python3 devkit/cli.py screenshot --locale en-US --keep-existing
+python3 deckprobe/cli.py screenshot --locale en-US --keep-existing
 ```
 
 Output lands in `screenshots/out/en-US/`. Pass `--script` to point at a

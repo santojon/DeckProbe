@@ -1,3 +1,8 @@
+// Reads the native compat-icon styling Steam applies on its own home cards
+// (CSS vars, themed classes) — useful when matching a plugin's own compat
+// badges to the native look. The `deck-shelves-home-root` id below is only
+// there to exclude this repo's own reference plugin mount from the native
+// search; swap it for your own plugin's mount id (or drop the check).
 (function() {
   try {
     var win = SteamUIStore.WindowStore.GamepadUIMainWindowInstance.BrowserWindow;

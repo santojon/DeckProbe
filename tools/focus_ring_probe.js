@@ -1,3 +1,10 @@
+// Reads the CSS driving Steam's native gamepad focus glow on a home card —
+// outline/box-shadow/pseudo-elements plus the --custom-sp-color-border /
+// --gpFocusColor family of theme vars, walked up the ancestor chain. Useful
+// for matching a plugin's own focus ring to native. The
+// `deck-shelves-home-root` id below only excludes this repo's own reference
+// plugin mount from the native search; swap it for your own plugin's mount
+// id (or drop the check).
 (function() {
   try {
     var win = SteamUIStore.WindowStore.GamepadUIMainWindowInstance.BrowserWindow;
