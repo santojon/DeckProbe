@@ -3,6 +3,11 @@
 > Support tooling. No releases, no semver. Entries are logged by date
 > for traceability only.
 
+## [2026-09-09]
+
+- **`deckprobe.config.json` selector overrides never actually took effect — a real bug, invisible only because the consuming project's own defaults happened to match `selectors.py`'s hardcoded fallbacks.** `lib/__init__.py` eagerly imported `selectors` (`from . import selectors`), and importing *any* submodule of a package runs that package's `__init__.py` first — so `selectors.py`'s module-level `_env()` calls (each reading `os.environ` exactly once, at import time) always ran before `lib.config.bootstrap()` (which every real entry point calls first, specifically to project `deckprobe.config.json` into matching `DECKPROBE_*` env vars) got a chance to set anything. Removed the eager import — every real consumer already does its own `from lib import selectors as S` after bootstrap, which resolves the submodule correctly regardless. Found while wiring a new override (`QAM_SECTIONS`, below) that genuinely differs from the hardcoded default, which is what finally made the bug observable ([`lib/__init__.py`](lib/__init__.py)).
+- **The QAM CollapsibleSection ids `expand_qam_sections()` force-opens before a screenshot were hardcoded straight into this generic toolkit's `nav.py`** — a project-specific list (and it had drifted stale after the consuming project split "Additional Features" into four sections). Moved to a new `QAM_SECTIONS` selector (`DECKPROBE_QAM_SECTIONS`, comma-separated), documented in `config.schema.json` like every other override ([`lib/selectors.py`](lib/selectors.py), [`screenshots/lib/nav.py`](screenshots/lib/nav.py)).
+
 ## [2026-09-02]
 
 - **`diag/` had 161 scripts, of which 144 were one-off historical debugging

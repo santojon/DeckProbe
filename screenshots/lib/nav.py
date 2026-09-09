@@ -4,6 +4,7 @@ specific state before a screenshot is taken.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 import time
@@ -22,12 +23,14 @@ from lib import selectors as S  # noqa: E402
 _QAM_SCOPE = S.QAM_SCOPE_SEL
 _COLLAPSIBLE_HEADER = S.COLLAPSIBLE_HEADER_SEL
 _ABOUT_ROUTE = S.ABOUT_ROUTE
+_QAM_SECTIONS_JSON = json.dumps([s.strip() for s in S.QAM_SECTIONS.split(",") if s.strip()])
 
 
 def _sub_sel(expr: str) -> str:
     return (expr
         .replace("__QAM_SCOPE__", _QAM_SCOPE)
-        .replace("__COLLAPSIBLE_HEADER__", _COLLAPSIBLE_HEADER))
+        .replace("__COLLAPSIBLE_HEADER__", _COLLAPSIBLE_HEADER)
+        .replace("__QAM_SECTIONS_JSON__", _QAM_SECTIONS_JSON))
 
 
 OPEN_QAM_EXPR = """
@@ -484,7 +487,7 @@ def expand_qam_sections(host: str, port: int) -> str:
     var KEY = 'ds-qam-sections';
     var state = {};
     try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) {}
-    ['behavior','shelves','smart','visual_global','saved_filters'].forEach(function(id){ state[id] = true; });
+    __QAM_SECTIONS_JSON__.forEach(function(id){ state[id] = true; });
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch(e) {}
 

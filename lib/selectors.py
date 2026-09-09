@@ -23,6 +23,7 @@ a fallback so older ``.env`` files keep working through the rename.
   DECKPROBE_ABOUT_ROUTE            # about / docs route
   DECKPROBE_CLASS_MAP_GLOBAL       # runtime classmap global var
   DECKPROBE_CLASS_MAP_LS_KEY       # runtime classmap localStorage key
+  DECKPROBE_QAM_SECTIONS           # comma-separated QAM CollapsibleSection ids to force-open
 """
 
 import os
@@ -46,3 +47,4 @@ COLLAPSIBLE_HEADER_SEL = _env("COLLAPSIBLE_HEADER_SEL", ".ds-collapsible-header"
 ABOUT_ROUTE            = _env("ABOUT_ROUTE",            "/deck-shelves/about")
 CLASS_MAP_GLOBAL       = _env("CLASS_MAP_GLOBAL",       "__DS_CLASS_MAP")
 CLASS_MAP_LS_KEY       = _env("CLASS_MAP_LS_KEY",       "ds_class_map")
+QAM_SECTIONS           = _env("QAM_SECTIONS",           "behavior,shelves,smart,visual_global,saved_filters")

@@ -26,7 +26,8 @@
         "CLASS_MAP_GLOBAL":       { "type": "string", "description": "Runtime classmap global var" },
         "CLASS_MAP_LS_KEY":       { "type": "string", "description": "Runtime classmap localStorage key" },
         "PROJECT_LABEL":          { "type": "string", "description": "Console-filter label" },
-        "SETTINGS_GLOBAL":        { "type": "string", "description": "Shared-settings global var" }
+        "SETTINGS_GLOBAL":        { "type": "string", "description": "Shared-settings global var" },
+        "QAM_SECTIONS":           { "type": "string", "description": "Comma-separated QAM CollapsibleSection ids to force-open before a screenshot" }
       }
     },
     "diag_dirs": {
