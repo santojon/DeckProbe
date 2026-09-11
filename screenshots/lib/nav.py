@@ -20,9 +20,11 @@ if _DECKPROBE_DIR not in sys.path:
     sys.path.insert(0, _DECKPROBE_DIR)
 from lib import selectors as S  # noqa: E402
 
+_HOME_MOUNT_ID = S.HOME_MOUNT_ID
 _QAM_SCOPE = S.QAM_SCOPE_SEL
 _COLLAPSIBLE_HEADER = S.COLLAPSIBLE_HEADER_SEL
 _ABOUT_ROUTE = S.ABOUT_ROUTE
+_SETTINGS_ROUTE = S.SETTINGS_ROUTE
 _QAM_SECTIONS_JSON = json.dumps([s.strip() for s in S.QAM_SECTIONS.split(",") if s.strip()])
 
 
@@ -154,6 +156,16 @@ _DS_PLUGIN_CLICK = """
 })()
 """
 
+_DS_OWN_TAB_CLICK = """
+(function(){
+  var tabs = Array.from(document.querySelectorAll('[role=tab]'));
+  var t = tabs.find(function(x){ return x.getAttribute('aria-label') === 'Deck Shelves'; });
+  if (!t) return 'not-found';
+  t.click();
+  return 'ok';
+})()
+"""
+
 _QAM_PLUGIN_SCROLL_DOWN = """
 (function(){
   var ps = document.querySelectorAll('[class*=scroll],[style*=overflow]');
@@ -193,6 +205,23 @@ def _bp_eval(host: str, port: int, expr: str) -> Any:
     """Run a JS expression in the Big Picture window."""
     try:
         sess = open_session(host, port, "Big Picture")
+        try:
+            return sess.evaluate(expr)
+        finally:
+            sess.close()
+    except Exception:
+        return None
+
+
+def _sjc_eval(host: str, port: int, expr: str) -> Any:
+    """Run a JS expression in the SharedJSContext realm — where `SteamUIStore`
+    (and the plugin's own globals) actually live; the Big Picture window's own
+    realm doesn't have it, so an expression needing it silently no-ops there
+    instead of raising (every `SteamUIStore?.…` optional-chain just resolves
+    to undefined). Self-contained like `_bp_eval`, for call sites with no
+    already-open `Session` to reuse."""
+    try:
+        sess = open_session(host, port, "SharedJSContext")
         try:
             return sess.evaluate(expr)
         finally:
@@ -320,7 +349,17 @@ def navigate(sjc: Session, route: str, settle_ms: int = 2000) -> None:
     if route in ("/library/home", "/library"):
         navigate_home(sjc, settle_ms=settle_ms)
         return
+    # `inst.Navigate(route)` — the same primitive `_NAVIGATE_HOME_EXPR` uses —
+    # is the one confirmed-reliable way to reach an arbitrary DS route (a
+    # `routerHook.addRoute` registration, e.g. `/deck-shelves/about`). The
+    # previous fallback chain here (`m_Navigator.LibraryTab()`, unconditional
+    # and unrelated to `route`; a `Router` global that doesn't exist on this
+    # build) never actually reached the requested route — confirmed live.
     expr = f"""(function(){{
+      try {{
+        var inst = SteamUIStore?.WindowStore?.GamepadUIMainWindowInstance;
+        if (inst?.Navigate) {{ inst.Navigate({route!r}); return 'instance.Navigate'; }}
+      }} catch(e) {{}}
       try {{
         var nav = SteamUIStore?.WindowStore?.GamepadUIMainWindowInstance?.m_Navigator;
         if (nav?.LibraryTab) {{ nav.LibraryTab(); return 'navigator.LibraryTab'; }}
@@ -337,6 +376,10 @@ def navigate(sjc: Session, route: str, settle_ms: int = 2000) -> None:
 
 def navigate_about(sjc: Session, settle_ms: int = 2000) -> None:
     navigate(sjc, _ABOUT_ROUTE, settle_ms)
+
+
+def navigate_settings(sjc: Session, settle_ms: int = 2000) -> None:
+    navigate(sjc, _SETTINGS_ROUTE, settle_ms)
 
 
 _FIND_ELEMENT_AFTER_TEXT_EXPR = """
@@ -440,7 +483,7 @@ def await_selector(sjc: Session, selector: str, timeout_ms: int = 5000, interval
 
 def dismiss_bp_modals(host: str, port: int) -> None:
     """Navigate BP to home to dismiss any open Decky modal or overlay."""
-    _bp_eval(host, port, _NAVIGATE_HOME_EXPR)
+    _sjc_eval(host, port, _NAVIGATE_HOME_EXPR)
     time.sleep(1.0)
 
 
@@ -457,7 +500,7 @@ def ensure_bp_clean(sjc: Session, host: str, port: int) -> None:
     # Reliable route change in SJC — leaves a sticky DS full-page route
     # (About / Settings) that the main menu can't dismiss, and lands home.
     navigate_home(sjc, settle_ms=2000)
-    if _bp_eval(host, port, "!!document.getElementById('deck-shelves-home-root')") is True:
+    if _bp_eval(host, port, f"!!document.getElementById({_HOME_MOUNT_ID!r})") is True:
         return
     # Not home yet (an overlay / Steam menu is up) — use the main menu, then
     # fall back to a BP-window navigation.
@@ -634,16 +677,28 @@ def navigate_to_ds_qam(sjc: Session, host: str, port: int, settle_ms: int = 2000
     silently closes the panel. Instead we verify the `.deck-shelves-qam-scope`
     after each action and retry, flipping the QAM toggle between attempts so
     that within a couple of passes a tab click lands while the panel is open.
-    Home nav runs in the Big Picture window (SJC nav would pop the Steam menu
-    overlay); any leftover modal is closed first.
+    Home nav runs through `sjc` (`SteamUIStore` only lives in the
+    SharedJSContext realm, not the Big Picture window's own — running it via
+    `_bp_eval` silently no-ops there, every try/catch swallowing a
+    ReferenceError); any leftover modal is closed first.
     """
     _dismiss_bp_modal(host, port)
-    _bp_eval(host, port, _NAVIGATE_HOME_EXPR)
+    try:
+        sjc.evaluate(_NAVIGATE_HOME_EXPR)
+    except Exception:
+        pass
     time.sleep(1.5)
 
     for _attempt in range(5):
         if _qam_eval(host, port, _DS_SCOPE_CHECK) is True:
             return True
+        # Own native tab (runtime/ownQamTab.ts, opt-in): a direct "Deck
+        # Shelves" tab may already sit in the main strip — one click reaches
+        # scope with no Decky-list detour at all when it's there.
+        if _qam_eval(host, port, _DS_OWN_TAB_CLICK) == "ok":
+            time.sleep(1.2)
+            if _qam_eval(host, port, _DS_SCOPE_CHECK) is True:
+                return True
         # Try to reach DS inside the (possibly open) QAM: Decky tab first.
         _qam_eval(host, port, _sub_sel(_DECKY_TAB_CLICK))
         time.sleep(1.2)

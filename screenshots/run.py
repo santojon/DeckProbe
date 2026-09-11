@@ -119,6 +119,7 @@ def main() -> int:  # noqa: C901
 
     captured: list[Path] = []
     failed: list[tuple[str, str]] = []
+    skipped: list[str] = []
     try:
         for name, fn in ALL_SCENARIOS:
             if only is not None and name not in only:
@@ -127,6 +128,18 @@ def main() -> int:  # noqa: C901
             t0 = time.time()
             try:
                 results = fn(sjc, host, port, out_dir)
+                # An empty dict used to vanish from both `captured` and
+                # `failed` (this loop simply never runs for zero items) —
+                # silent either way. Several scenarios return `{}` BY DESIGN
+                # on a device that genuinely lacks their precondition (no
+                # saved filter, Advanced mode off, an integration not
+                # installed — see saved_filters_qam / settings_advanced /
+                # integration_*), so this is a neutral "skipped" note, not a
+                # failure: those scenarios already log their own reason when
+                # it's a real one worth surfacing.
+                if not results:
+                    skipped.append(name)
+                    print(f"  – {name}: no output (skipped or precondition absent)")
                 for fname, p in (results or {}).items():
                     if p and p.exists():
                         size_kb = p.stat().st_size // 1024
@@ -142,6 +155,8 @@ def main() -> int:  # noqa: C901
 
     print()
     print(f"Captured {len(captured)} screenshots")
+    if skipped:
+        print(f"Skipped {len(skipped)} (no output — precondition absent on this device): {', '.join(skipped)}")
     if failed:
         print(f"Failed: {len(failed)}")
         for name, msg in failed:
