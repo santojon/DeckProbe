@@ -31,7 +31,7 @@
       }
     },
     "diag_dirs": {
-      "description": "Extra directories scanned by `cli.py diag list/run`. Paths are anchored to the parent repo root when relative. Becomes DECKPROBE_DIAG_DIRS (colon-joined).",
+      "description": "Extra directories scanned by `cli.py diag list/run`. Paths are anchored to the parent repo root when relative. Becomes DECKPROBE_DIAG_DIRS (os.pathsep-joined: ':' on macOS/Linux/SteamOS, ';' on Windows).",
       "oneOf": [
         { "type": "string" },
         { "type": "array", "items": { "type": "string" } }

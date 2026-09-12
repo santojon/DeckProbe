@@ -3,6 +3,27 @@
 > Support tooling. No releases, no semver. Entries are logged by date
 > for traceability only.
 
+## [2026-09-12]
+
+- **`DECKPROBE_DIAG_DIRS` was hardcoded to split/join on `:`, which breaks on
+  Windows** — Windows uses `;` as its path-list separator, and a `:` split
+  would also cut a lone Windows path in half at its own drive letter (e.g.
+  `C:\Users\...` → `C` and `\Users\...`). Both sides — `lib/config.py`'s
+  join (projecting a `deckprobe.config.json` array into the env var) and
+  `cli.py`'s split (`_diag_dirs()`) — now use `os.pathsep`, so the same
+  value round-trips correctly regardless of host OS. No change in behavior
+  on macOS/Linux/SteamOS, where `os.pathsep` is still `:`
+  ([`lib/config.py`](lib/config.py), [`cli.py`](cli.py)).
+- Audited the rest of the toolkit for host-OS assumptions (path handling,
+  shell calls, `sys.platform`/`os.name` checks) while confirming DeckProbe
+  runs as intended from macOS, Linux, SteamOS, and Windows as the host, and
+  targets a Big Picture / gamescope (Game Mode) CDP session on any of the
+  same four — the CDP layer (`lib/cdp.py`) is a raw stdlib socket client
+  with no OS-specific code path, and target resolution matches on window
+  title substring, not anything host-specific. The `DECKPROBE_DIAG_DIRS`
+  bug above was the only real gap found. Platform badge updated to list all
+  four ([`README.md`](README.md)).
+
 ## [2026-09-09]
 
 - **`deckprobe.config.json` selector overrides never actually took effect — a real bug, invisible only because the consuming project's own defaults happened to match `selectors.py`'s hardcoded fallbacks.** `lib/__init__.py` eagerly imported `selectors` (`from . import selectors`), and importing *any* submodule of a package runs that package's `__init__.py` first — so `selectors.py`'s module-level `_env()` calls (each reading `os.environ` exactly once, at import time) always ran before `lib.config.bootstrap()` (which every real entry point calls first, specifically to project `deckprobe.config.json` into matching `DECKPROBE_*` env vars) got a chance to set anything. Removed the eager import — every real consumer already does its own `from lib import selectors as S` after bootstrap, which resolves the submodule correctly regardless. Found while wiring a new override (`QAM_SECTIONS`, below) that genuinely differs from the hardcoded default, which is what finally made the bug observable ([`lib/__init__.py`](lib/__init__.py)).

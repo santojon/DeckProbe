@@ -8,8 +8,9 @@ Usage:
   cli.py diag run <script>
 
 `diag list`/`run` look in deckprobe/diag/ AND in directories listed in
-DECKPROBE_DIAG_DIRS (colon-separated) or via --extra-dir, so projects can
-keep their app-specific diag scripts outside the deckprobe tree.
+DECKPROBE_DIAG_DIRS (os.pathsep-separated: ':' on macOS/Linux/SteamOS, ';'
+on Windows) or via --extra-dir, so projects can keep their app-specific
+diag scripts outside the deckprobe tree.
 """
 import argparse
 import subprocess
@@ -70,7 +71,7 @@ def _diag_dirs(extra_dir):
     dirs = [os.path.join(HERE, 'diag')]
     extra_env = os.environ.get('DECKPROBE_DIAG_DIRS', '')
     if extra_env:
-        for p in extra_env.split(':'):
+        for p in extra_env.split(os.pathsep):
             if p:
                 dirs.append(_resolve_anchored(p))
     if extra_dir:
@@ -119,7 +120,7 @@ def main():
     p_diag = sub.add_parser('diag')
     p_diag_sub = p_diag.add_subparsers(dest='diagcmd')
     p_diag_list = p_diag_sub.add_parser('list')
-    p_diag_list.add_argument('--extra-dir', default='', help='Extra diag dir to scan (also DECKPROBE_DIAG_DIRS env, colon-separated).')
+    p_diag_list.add_argument('--extra-dir', default='', help='Extra diag dir to scan (also DECKPROBE_DIAG_DIRS env, os.pathsep-separated).')
     p_diag_list.set_defaults(func=list_diags)
     p_diag_run = p_diag_sub.add_parser('run')
     p_diag_run.add_argument('script')

@@ -12,7 +12,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](#requirements)
 [![Node](https://img.shields.io/badge/node-18%2B-brightgreen?logo=node.js&logoColor=white)](#requirements)
-[![Platform](https://img.shields.io/badge/platform-Steam%20OS-purple?logo=steamdeck&logoColor=white)](https://github.com/ValveSoftware/SteamOS)
+[![Platform](https://img.shields.io/badge/platform-SteamOS%20%C2%B7%20Linux%20%C2%B7%20macOS%20%C2%B7%20Windows-purple?logo=steamdeck&logoColor=white)](https://github.com/ValveSoftware/SteamOS)
 
 Toolkit for developing Steam Deck plugins against a live device — CDP
 probes, screenshot pipeline, perf bench, UI-test runner. The scaffold
@@ -151,7 +151,8 @@ command line still trumps the file.
     "SETTINGS_GLOBAL":        "__MY_PLUGIN_SHARED_SETTINGS__"
   },
 
-  // Where to find project-specific diag scripts (colon-separated).
+  // Where to find project-specific diag scripts (array here, or a single
+  // os.pathsep-separated string).
   "diag_dirs": [
     "scripts/deckprobe-ext/diag"
   ],

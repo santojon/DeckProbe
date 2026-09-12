@@ -30,9 +30,20 @@ DECK_CDP_PORT=8081           # default CDP port
 # DECK_CDP_HOST=...          # only if you tunnel CDP; defaults to DECK_HOST
 ```
 
-Make sure Steam is launched with CDP enabled. On SteamOS that's the
-default when Decky is installed; otherwise add `--cef-enable-debugging`
-to the Steam launch flags.
+Make sure Steam is launched with CEF remote debugging enabled on the
+target device — how, depends on its OS:
+
+- **SteamOS / Steam Deck** — enabled automatically once Decky Loader is
+  installed; no manual step needed.
+- **Linux (desktop)** — `touch ~/.steam/steam/.cef-enable-remote-debugging`,
+  then restart Steam.
+- **macOS** — `open -a Steam --args -cef-enable-remote-debugging`.
+- **Windows** — launch Steam with `steam.exe -cef-enable-remote-debugging`.
+
+DeckProbe itself runs the same way regardless of which OS is hosting it —
+point `DECK_HOST`/`DECK_CDP_PORT` at whichever of the above you enabled
+(`127.0.0.1` for a local desktop client, the device's IP for a Deck or a
+remote machine).
 
 Verify connectivity:
 
@@ -119,8 +130,9 @@ toolkit's own rename to DeckProbe.
 
 For project-specific diag scripts that don't fit the generic pattern,
 point `DECKPROBE_DIAG_DIRS=...` at any folder hierarchy you prefer
-(colon-separated, like `PATH`) and the CLI picks them up automatically
-alongside the built-in ones — no fixed directory name required:
+(`os.pathsep`-separated, like `PATH` — `:` on macOS/Linux/SteamOS, `;` on
+Windows) and the CLI picks them up automatically alongside the built-in
+ones — no fixed directory name required:
 
 ```
 my-plugin/

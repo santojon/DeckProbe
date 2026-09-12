@@ -70,7 +70,10 @@ def load_dotenv_from_repo() -> None:
 
 def _project_value(value) -> str:
     if isinstance(value, list):
-        return ":".join(str(p) for p in value)
+        # os.pathsep matches how cli.py's _diag_dirs() splits this back
+        # apart — ':' on macOS/Linux/SteamOS, ';' on Windows (where a lone
+        # ':' would also wrongly split a drive letter like "C:\...").
+        return os.pathsep.join(str(p) for p in value)
     return str(value)
 
 
