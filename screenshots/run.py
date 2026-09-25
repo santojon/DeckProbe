@@ -90,7 +90,16 @@ def main() -> int:  # noqa: C901
     parser.add_argument("--list", action="store_true", help="List registered scenarios and exit")
     parser.add_argument("--scenarios-dir", default=os.environ.get("SCREENSHOTS_SCENARIOS_DIR", ""),
                         help="Directory containing scenario *.py files using @register from deckprobe.screenshots.lib.registry.")
+    parser.add_argument("--locale", default="", help="Force the plugin UI to this locale (e.g. pt-BR) before "
+                        "capturing. Default: unset — each scenario's own existing behavior (several already force "
+                        "en-US for deterministic label matching; others follow whatever the device is set to).")
     args = parser.parse_args()
+
+    if args.locale:
+        # Read by scripts/deckprobe-ext/screenshots/scenarios/_locale.py's
+        # force_locale() — set before scenario modules import so any
+        # module-level default resolution also sees it.
+        os.environ["DECKPROBE_SCREENSHOTS_LOCALE"] = args.locale
 
     if args.scenarios_dir:
         _load_external_scenarios(args.scenarios_dir)

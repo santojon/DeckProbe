@@ -18,6 +18,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ...screenshots.lib.cdp import Session, open_session
 from ...screenshots.lib import nav, capture
+from ...screenshots.lib.capture import BIGPICTURE_TITLE_SUBSTRING, QAM_TITLE_SUBSTRING
+from ...lib.video import start_screencast, encode_mp4, Recording, FfmpegNotFoundError
 
 
 @dataclass
@@ -28,6 +30,7 @@ class Context:
     host: str
     port: int
     out_dir: Path
+    _recording: Optional[Recording] = field(default=None, repr=False)
 
     def eval(self, expr: str, return_by_value: bool = True, timeout: float = 8.0) -> Any:
         """Evaluate in Big Picture where DS shelves render."""
@@ -77,6 +80,48 @@ class Context:
     def screenshot_qam(self, name: str) -> Optional[Path]:
         return capture.capture_qam(self.host, self.port, self.out_dir / name)
 
+    def start_recording(self, target: str = "bp") -> None:
+        """Start a screencast of `target` ("bp" or "qam") on its own
+        dedicated CDP connection — separate from the session(s) driving the
+        flow, so evaluating/clicking while recording never drops frames.
+        Call `stop_recording(name)` once the flow being captured is done.
+        Only one recording at a time per Context; a failure to reach the
+        target (e.g. QAM not open) is swallowed with a printed warning
+        rather than failing the test itself."""
+        if self._recording is not None:
+            raise RuntimeError("a recording is already in progress — call stop_recording() first")
+        title = QAM_TITLE_SUBSTRING if target == "qam" else BIGPICTURE_TITLE_SUBSTRING
+        frames_dir = self.out_dir / "_frames" / f"{title.replace(' ', '_')}_{int(time.time() * 1000)}"
+        try:
+            self._recording = start_screencast(self.host, self.port, title, frames_dir)
+        except Exception as e:
+            print(f"  WARN: could not start recording ({target}): {e}")
+            self._recording = None
+
+    def stop_recording(self, name: str, fps: int = 10) -> Optional[Path]:
+        """Stop the active recording (if any) and encode it to
+        `<out_dir>/name` (should end in .mp4). Returns None — with a
+        printed warning, never a raised exception — if nothing was
+        recording, ffmpeg isn't on PATH, or zero frames were captured."""
+        rec = self._recording
+        self._recording = None
+        if rec is None:
+            return None
+        count = rec.stop()
+        if count == 0:
+            print(f"  (0 frames captured for {name}, skipping encode)")
+            return None
+        out_path = self.out_dir / name
+        try:
+            path = encode_mp4(rec.frames_dir, out_path, fps=fps)
+            print(f"  video: {path} ({count} frames)")
+            return path
+        except FfmpegNotFoundError as e:
+            print(f"  WARN: {e}")
+        except Exception as e:
+            print(f"  WARN: mp4 encode failed for {name}: {e}")
+        return None
+
 
 @dataclass
 class TestResult:
@@ -116,7 +161,15 @@ class SkipTest(Exception):
     """Raise inside a test to mark it as skipped (environment not ready)."""
 
 
-def run(host: str, port: int, out_dir: Path, only: Optional[List[str]] = None) -> List[TestResult]:
+def run(host: str, port: int, out_dir: Path, only: Optional[List[str]] = None,
+        record: Optional[str] = None, video_fps: int = 10) -> List[TestResult]:
+    """`record`, when set to `"bp"` or `"qam"`, wraps EVERY test that runs
+    with a screencast of that target — no suite file needs to call
+    start_recording/stop_recording itself. Each test's video lands at
+    `<out_dir>/<suite>.<test>.mp4`. A test can still call
+    `ctx.start_recording()`/`.stop_recording()` itself for finer control
+    (e.g. only part of the test, or the other target) when `record` is left
+    unset."""
     sjc = open_session(host, port, "SharedJSContext")
     bp  = open_session(host, port, "Big Picture")
     # QuickAccess session is opened lazily by qam_shelves._require_qam() after
@@ -130,6 +183,8 @@ def run(host: str, port: int, out_dir: Path, only: Optional[List[str]] = None) -
                 full = f"{s.name}.{tname}"
                 if only and not any(full.startswith(o) or s.name == o for o in only):
                     continue
+                if record:
+                    ctx.start_recording(record)
                 t0 = time.time()
                 try:
                     fn(ctx)
@@ -145,6 +200,9 @@ def run(host: str, port: int, out_dir: Path, only: Optional[List[str]] = None) -
                     tb = traceback.format_exc(limit=3)
                     results.append(TestResult(s.name, tname, "fail", int((time.time() - t0) * 1000), tb))
                     print(f"ERROR {full} :: {e}")
+                finally:
+                    if record:
+                        ctx.stop_recording(f"{full}.mp4", fps=video_fps)
     finally:
         sjc.close()
         bp.close()

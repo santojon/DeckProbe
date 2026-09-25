@@ -95,6 +95,11 @@ def main() -> int:
                         default=os.environ.get("DECKPROBE_UITESTS_SUITES_DIR") or os.environ.get("UITESTS_SUITES_DIR", ""),
                         help="Directory containing suite *.py files (each calling @suite(...).test()). "
                              "Falls back to DECKPROBE_UITESTS_SUITES_DIR / UITESTS_SUITES_DIR.")
+    parser.add_argument("--record", choices=["bp", "qam"], default=None,
+                        help="Record every test that runs as an MP4 of the given target (bp = Big Picture, "
+                             "qam = QuickAccess), saved to <out>/<suite>.<test>.mp4. Requires ffmpeg on PATH. "
+                             "Off by default — recording is real per-test overhead on top of the flow itself.")
+    parser.add_argument("--video-fps", type=int, default=10, help="Frame rate for --record's MP4 encode (default 10).")
     args = parser.parse_args()
 
     if args.suites_dir:
@@ -125,7 +130,7 @@ def main() -> int:
     only = [s.strip() for s in args.only.split(",") if s.strip()] if args.only else None
     print(f"Targeting {host}:{port}")
 
-    results = run(host, port, out_dir, only=only)
+    results = run(host, port, out_dir, only=only, record=args.record, video_fps=args.video_fps)
     passed = sum(1 for r in results if r.status == "pass")
     failed = sum(1 for r in results if r.status == "fail")
     print()

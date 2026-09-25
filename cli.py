@@ -65,6 +65,8 @@ def run_screenshot(args):
         cmd += ['--scenarios-dir', scenarios_dir]
     if args.only:
         cmd += ['--only', args.only]
+    if getattr(args, 'locale', ''):
+        cmd += ['--locale', args.locale]
     return subprocess.run(cmd, cwd=repo_root).returncode
 
 def _diag_dirs(extra_dir):
@@ -115,6 +117,7 @@ def main():
     p_ss = sub.add_parser('screenshot')
     p_ss.add_argument('--only', default='', help='Comma-separated scenario names to run (default: all).')
     p_ss.add_argument('--scenarios-dir', default='', help='Dir with @register scenario *.py files (also DECKPROBE_SCREENSHOTS_SCENARIOS_DIR env / deckprobe.config.json `screenshots_scenarios_dir`).')
+    p_ss.add_argument('--locale', default='', help='Locale to force before capturing (e.g. pt-BR); default = today\'s behavior (each scenario decides for itself, several already force en-US).')
     p_ss.set_defaults(func=run_screenshot)
 
     p_diag = sub.add_parser('diag')

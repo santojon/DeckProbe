@@ -39,6 +39,12 @@ reports/local/
 *.cdp.json
 *.perf.json
 
+# uitests --record: raw JPEG frames (lib/video.py's Recording.frames_dir)
+# and the encoded MP4s, wherever --out lands (repo-root tmp/ already covers
+# the default; this is a catch-all for a custom --out elsewhere).
+_frames/
+*.mp4
+
 # Hidden folders
 /.*/
 !.github/

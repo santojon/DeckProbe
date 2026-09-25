@@ -147,15 +147,18 @@ my-plugin/
 ## Screenshot pipeline
 
 ```bash
-# Take screenshots in every supported locale
+# Default: whatever each scenario already does today (several force en-US
+# for deterministic label matching; others follow the device's own locale).
 python3 deckprobe/cli.py screenshot
 
-# Single locale only
-python3 deckprobe/cli.py screenshot --locale en-US
-
-# Keep previous output instead of wiping `screenshots/out/`
-python3 deckprobe/cli.py screenshot --keep-existing
+# Force one locale across every scenario instead.
+python3 deckprobe/cli.py screenshot --locale pt-BR
 ```
+
+`--locale` is read by the project's own scenario files via
+`scripts/deckprobe-ext/screenshots/scenarios/_locale.py`'s `force_locale()` —
+the generic runner itself never assumes a particular plugin's locale hook
+exists; it only passes the value through as `DECKPROBE_SCREENSHOTS_LOCALE`.
 
 The runner underneath (`deckprobe/screenshots/run.py`) is surface-agnostic
 and knows nothing about any specific plugin's scenarios — point
@@ -167,6 +170,29 @@ python3 -m deckprobe.screenshots.run \
   --host <deck-host> --out assets/screenshots \
   --scenarios-dir scripts/deckprobe-ext/screenshots/scenarios
 ```
+
+## Video capture (uitests --record)
+
+`deckprobe/uitests/run.py` can record every test it runs as an MP4 —
+`Page.startScreencast` frames saved locally, then encoded with a LOCAL
+`ffmpeg` (never installed on the Deck; install it on the machine running
+this tool). Requires no changes to existing suite files:
+
+```bash
+python3 -m deckprobe.uitests.run --host <deck-host> --record bp
+# or record the QAM popup instead of Big Picture:
+python3 -m deckprobe.uitests.run --host <deck-host> --record qam
+```
+
+Each test's video lands at `<out>/<suite>.<test>.mp4` (default out dir:
+`tmp/uitest-out/`). Recording is real per-test overhead on top of the flow
+itself — CDP screencast frame delivery over Wi-Fi to a real device hasn't
+been benchmarked yet, so treat the default 10 fps / full quality as a
+starting point, not a guarantee; `--video-fps` and (for finer control)
+`Context.start_recording()`/`.stop_recording()` in a suite file are there to
+tune it. Host-agnostic by construction — this talks to whatever CDP target
+`DECK_CDP_HOST`/`DECK_CDP_PORT` exposes, the same regardless of whether the
+app under test is currently loaded via Decky Loader or a standalone host.
 
 ## Perf bench
 
