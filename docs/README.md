@@ -182,17 +182,35 @@ this tool). Requires no changes to existing suite files:
 python3 -m deckprobe.uitests.run --host <deck-host> --record bp
 # or record the QAM popup instead of Big Picture:
 python3 -m deckprobe.uitests.run --host <deck-host> --record qam
+# choose the locale forced before recording (default: en-US — pass '' to
+# leave the device's own locale alone) and where videos land:
+python3 -m deckprobe.uitests.run --host <deck-host> --record bp \
+  --locale en-US --out tmp/my-videos
 ```
 
 Each test's video lands at `<out>/<suite>.<test>.mp4` (default out dir:
-`tmp/uitest-out/`). Recording is real per-test overhead on top of the flow
-itself — CDP screencast frame delivery over Wi-Fi to a real device hasn't
-been benchmarked yet, so treat the default 10 fps / full quality as a
-starting point, not a guarantee; `--video-fps` and (for finer control)
-`Context.start_recording()`/`.stop_recording()` in a suite file are there to
-tune it. Host-agnostic by construction — this talks to whatever CDP target
-`DECK_CDP_HOST`/`DECK_CDP_PORT` exposes, the same regardless of whether the
-app under test is currently loaded via Decky Loader or a standalone host.
+`tmp/uitest-out/`, resolved against the repo root even when `--out` is a
+relative path — same place whether invoked via `pnpm run uitests:record`
+from the `deckprobe/` workspace or directly from the repo root).
+`--locale` forces the plugin UI to a known language before the run — the
+same `globalThis.__dsSetLocale` hook `_locale.py` uses for screenshots —
+so a recorded flow reads consistently regardless of the device's own
+locale; defaults to `en-US`, matching the screenshot pipeline's own
+default.
+
+Verified live against a real Steam Deck over Wi-Fi (see the `profiles`
+suite). Recording is real per-test overhead on top of the flow itself: CDP
+screencast frame delivery competes with the CDP calls that drive the flow
+(clicks, evals) for the same device's attention, and was observed to
+noticeably slow both down — a suite meant to be recorded should poll for
+DOM state with a generous timeout rather than a fixed short sleep, and treat
+a single click as possibly dropped (poll-and-retry, not fire-and-forget) —
+see `profiles.py`'s `_add_charging_trigger` for the pattern. `--video-fps`
+and (for finer control) `Context.start_recording()`/`.stop_recording()` in a
+suite file are there to tune frame rate/quality. Host-agnostic by
+construction — this talks to whatever CDP target `DECK_CDP_HOST`/
+`DECK_CDP_PORT` exposes, the same regardless of whether the app under test
+is currently loaded via Decky Loader or a standalone host.
 
 ## Perf bench
 

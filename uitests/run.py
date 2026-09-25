@@ -100,6 +100,10 @@ def main() -> int:
                              "qam = QuickAccess), saved to <out>/<suite>.<test>.mp4. Requires ffmpeg on PATH. "
                              "Off by default — recording is real per-test overhead on top of the flow itself.")
     parser.add_argument("--video-fps", type=int, default=10, help="Frame rate for --record's MP4 encode (default 10).")
+    parser.add_argument("--locale", default="en-US",
+                        help="Force the plugin UI to this locale before running (e.g. pt-BR) — same "
+                             "__dsSetLocale hook the screenshot pipeline uses. Defaults to en-US, matching "
+                             "the screenshot pipeline's own default; pass '' to leave the device's own locale alone.")
     args = parser.parse_args()
 
     if args.suites_dir:
@@ -124,13 +128,20 @@ def main() -> int:
         print("error: --host required (or set DECK_HOST)", file=sys.stderr)
         return 2
 
-    out_dir = Path(args.out).resolve()
+    # A relative --out anchors at the repo root, not the caller's CWD — so
+    # the same `--out my/folder` means the same place whether this runs via
+    # `pnpm run uitests:record` (CWD = deckprobe/) or invoked directly from
+    # the repo root. An absolute path is used as-is either way.
+    out_path = Path(args.out)
+    out_dir = out_path if out_path.is_absolute() else (REPO_ROOT / out_path)
+    out_dir = out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
     only = [s.strip() for s in args.only.split(",") if s.strip()] if args.only else None
     print(f"Targeting {host}:{port}")
+    print(f"Output: {out_dir}")
 
-    results = run(host, port, out_dir, only=only, record=args.record, video_fps=args.video_fps)
+    results = run(host, port, out_dir, only=only, record=args.record, video_fps=args.video_fps, locale=args.locale)
     passed = sum(1 for r in results if r.status == "pass")
     failed = sum(1 for r in results if r.status == "fail")
     print()
