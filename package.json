@@ -11,6 +11,8 @@
     "cli": "node scripts/py.mjs cli.py",
     "probe": "node scripts/py.mjs cli.py probe",
     "screenshots": "node scripts/py.mjs cli.py screenshot",
+    "videos": "node scripts/py.mjs cli.py video",
+    "videos:list": "cd .. && node deckprobe/scripts/py.mjs -m deckprobe.videos.run --list",
     "diag": "node scripts/py.mjs cli.py diag list",
     "diag:run": "node scripts/py.mjs cli.py diag run",
     "perf:bench": "node scripts/py.mjs perf-bench.py",

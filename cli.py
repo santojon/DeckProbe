@@ -4,6 +4,7 @@
 Usage:
   cli.py probe [--mode smoke|rows|mount]
   cli.py screenshot [--keep-existing] [--locale LOCALE]
+  cli.py video [--only <names>] [--scenarios-dir <dir>] [--locale LOCALE] [--video-fps <n>]
   cli.py diag list [--extra-dir <path>]
   cli.py diag run <script>
 
@@ -69,6 +70,30 @@ def run_screenshot(args):
         cmd += ['--locale', args.locale]
     return subprocess.run(cmd, cwd=repo_root).returncode
 
+def run_video(args):
+    # Drives the modular runner (deckprobe.videos.run), loading project
+    # scenarios from the configured scenarios dir. Mirrors run_screenshot
+    # exactly, plus --video-fps; the output dir defaults to a gitignored
+    # tmp/ instead of a committed assets dir (see deckprobe/videos/run.py).
+    repo_root = os.path.abspath(os.path.join(HERE, '..'))
+    scenarios_dir = _resolve_anchored(
+        args.scenarios_dir or os.environ.get('DECKPROBE_VIDEOS_SCENARIOS_DIR', '')
+    )
+    out_dir = _resolve_anchored(os.environ.get('DECKPROBE_VIDEOS_DIR', '') or 'tmp/videos')
+    host = os.environ.get('DECK_CDP_HOST') or os.environ.get('DECK_HOST') or 'localhost'
+    port = os.environ.get('DECK_CDP_PORT', '8081')
+    cmd = [sys.executable, '-m', 'deckprobe.videos.run',
+           '--host', host, '--port', str(port), '--out', out_dir]
+    if scenarios_dir:
+        cmd += ['--scenarios-dir', scenarios_dir]
+    if args.only:
+        cmd += ['--only', args.only]
+    if getattr(args, 'locale', ''):
+        cmd += ['--locale', args.locale]
+    if getattr(args, 'video_fps', 0):
+        cmd += ['--video-fps', str(args.video_fps)]
+    return subprocess.run(cmd, cwd=repo_root).returncode
+
 def _diag_dirs(extra_dir):
     dirs = [os.path.join(HERE, 'diag')]
     extra_env = os.environ.get('DECKPROBE_DIAG_DIRS', '')
@@ -119,6 +144,13 @@ def main():
     p_ss.add_argument('--scenarios-dir', default='', help='Dir with @register scenario *.py files (also DECKPROBE_SCREENSHOTS_SCENARIOS_DIR env / deckprobe.config.json `screenshots_scenarios_dir`).')
     p_ss.add_argument('--locale', default='', help='Locale to force before capturing (e.g. pt-BR); default = today\'s behavior (each scenario decides for itself, several already force en-US).')
     p_ss.set_defaults(func=run_screenshot)
+
+    p_vid = sub.add_parser('video')
+    p_vid.add_argument('--only', default='', help='Comma-separated scenario names to run (default: all).')
+    p_vid.add_argument('--scenarios-dir', default='', help='Dir with @register scenario *.py files (also DECKPROBE_VIDEOS_SCENARIOS_DIR env / deckprobe.config.json `videos_scenarios_dir`). Accepts an absolute path outside this repo.')
+    p_vid.add_argument('--locale', default='', help='Locale to force before recording (e.g. pt-BR); default = unset (each scenario decides for itself).')
+    p_vid.add_argument('--video-fps', type=int, default=0, help='Frame rate for the MP4 encode (default 10, set by the runner when omitted).')
+    p_vid.set_defaults(func=run_video)
 
     p_diag = sub.add_parser('diag')
     p_diag_sub = p_diag.add_subparsers(dest='diagcmd')

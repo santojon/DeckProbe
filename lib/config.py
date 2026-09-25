@@ -28,6 +28,8 @@ CONFIG_ENV_MAP = {
     "uitests_suites_dir": "DECKPROBE_UITESTS_SUITES_DIR",
     "screenshots_scenarios_dir": "DECKPROBE_SCREENSHOTS_SCENARIOS_DIR",
     "screenshots_dir":    "DECKPROBE_SCREENSHOTS_DIR",
+    "videos_scenarios_dir": "DECKPROBE_VIDEOS_SCENARIOS_DIR",
+    "videos_dir":         "DECKPROBE_VIDEOS_DIR",
     "perf_bench_config":  "DECKPROBE_PERF_BENCH_CONFIG",
 }
 

@@ -9,6 +9,8 @@ End-to-end examples for using the toolkit against a live Steam Deck.
 - [Writing a custom probe](#writing-a-custom-probe)
 - [Retargeting to your plugin](#retargeting-to-your-plugin)
 - [Screenshot pipeline](#screenshot-pipeline)
+- [Video capture (uitests --record)](#video-capture-uitests---record)
+- [Video scenarios (deliberate recordings, not test byproducts)](#video-scenarios-deliberate-recordings-not-test-byproducts)
 - [Perf bench](#perf-bench)
 - [Class-map injection](#class-map-injection)
 - [CDP target conventions](#cdp-target-conventions)
@@ -211,6 +213,47 @@ suite file are there to tune frame rate/quality. Host-agnostic by
 construction — this talks to whatever CDP target `DECK_CDP_HOST`/
 `DECK_CDP_PORT` exposes, the same regardless of whether the app under test
 is currently loaded via Decky Loader or a standalone host.
+
+## Video scenarios (deliberate recordings, not test byproducts)
+
+`uitests --record` above ties a recording to a test run — useful for
+debugging a failure visually, one MP4 per test. `deckprobe/videos/` is a
+separate, lighter pipeline for the opposite case: no assertions, just a
+named flow you deliberately want captured (a feature demo, a content-script
+source clip) — same `@register` shape as the screenshot scenarios above, so
+a scenario author who already knows that pattern needs nothing new:
+
+```python
+# scripts/deckprobe-ext/videos/scenarios/example.py
+from deckprobe.videos.lib.registry import register
+from deckprobe.videos.lib.capture import record
+
+@register("home_scroll")
+def home_scroll(sjc, host, port, out_dir):
+    with record(host, port, "Big Picture", out_dir, "home_scroll.mp4"):
+        ...  # drive the flow on sjc, or open a fresh session
+    return {"home_scroll.mp4": out_dir / "home_scroll.mp4"}
+```
+
+```bash
+python3 deckprobe/cli.py video --only home_scroll
+# or the module directly, same flags as screenshots.run plus --video-fps:
+python3 -m deckprobe.videos.run --host <deck-host> \
+  --scenarios-dir scripts/deckprobe-ext/videos/scenarios \
+  --out tmp/videos --video-fps 10
+```
+
+Both `--scenarios-dir` (where scenario `*.py` files live) and `--out`
+(where the generated `.mp4` files land) accept an absolute path outside
+this repo entirely — handy since recordings are large binaries nobody
+wants committed. Relative paths anchor at the repo root either way. Same
+convention-file wiring as everything else here: `deckprobe.config.json`'s
+`videos_scenarios_dir` / `videos_dir` project a default, `DECKPROBE_VIDEOS_SCENARIOS_DIR`
+/ `DECKPROBE_VIDEOS_DIR` env vars (e.g. in a personal, gitignored `.env`)
+override it — an env var always wins. `videos_dir` is intentionally unset
+in this project's own `deckprobe.config.json` (falls back to a gitignored
+`tmp/videos/`); point `DECKPROBE_VIDEOS_DIR` at wherever you actually want
+finished recordings to land.
 
 ## Perf bench
 

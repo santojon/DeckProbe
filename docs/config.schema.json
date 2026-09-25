@@ -49,6 +49,14 @@
       "type": "string",
       "description": "Output directory for captured screenshots. Defaults to `<parent_root>/screenshots/` (created on first use). Becomes DECKPROBE_SCREENSHOTS_DIR."
     },
+    "videos_scenarios_dir": {
+      "type": "string",
+      "description": "Default --scenarios-dir for `python -m deckprobe.videos.run` (dir of @register scenario *.py). Becomes DECKPROBE_VIDEOS_SCENARIOS_DIR."
+    },
+    "videos_dir": {
+      "type": "string",
+      "description": "Output directory for recorded .mp4 files. Accepts an absolute path outside the repo (recordings are large binaries, usually kept out of version control) — defaults to `<parent_root>/tmp/videos/` when unset. Becomes DECKPROBE_VIDEOS_DIR."
+    },
     "perf_bench_config": {
       "type": "string",
       "description": "Default --config path for `deckprobe/perf-bench.py`. Becomes DECKPROBE_PERF_BENCH_CONFIG."
